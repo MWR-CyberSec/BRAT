@@ -52,6 +52,8 @@ func (u UserRepositoryImpl) DeleteUserById(id int) error {
 }
 
 func (u UserRepositoryImpl) Save(user *dao.User) (dao.User, error) {
+	println("user", user)
+	println("user", user.Password)
 	err := u.db.Save(user).Error
 	if err != nil {
 		log.Error(err)

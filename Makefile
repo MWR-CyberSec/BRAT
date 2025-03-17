@@ -6,3 +6,18 @@ init-dependency:
 	go get -u gorm.io/driver/postgres
 	go get -u github.com/sirupsen/logrus
 	go get -u github.com/joho/godotenv
+
+
+build-docker:
+	docker compose down
+	-docker volume prune -f
+	-docker rm bark
+	-docker rmi bark
+	docker compose up -d
+
+
+clean:
+	docker compose down
+	docker volume prune -f
+	-docker rmi bark-app
+	-docker rm bark

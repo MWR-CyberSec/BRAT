@@ -90,6 +90,7 @@ func (u UserServiceImpl) AddUserData(c *gin.Context) {
 		pkg.PanicException(constant.UnkownError)
 	}
 
+	log.Info("request", request)
 	request.Password = string(hash)
 	u.userRepository.Save(&request)
 
