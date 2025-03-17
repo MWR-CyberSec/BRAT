@@ -1,0 +1,8 @@
+PUT /api/user/1 HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
+
+{
+  "name": "Fake Alice",
+  "email": "fakealice@presentland.com"
+}

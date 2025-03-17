@@ -7,3 +7,13 @@ Content-Type: application/json
   "email": "alicein@wonderland.com",
   "password":"123456"
 }
+
+POST /api/user HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
+
+{
+  "name": "John",
+  "email": "john@doe.com",
+  "password":"654321"
+}
