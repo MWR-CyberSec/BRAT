@@ -31,6 +31,9 @@ COPY --from=builder /app/.env ./
 # initialize the database
 COPY --from=builder /app/build_scripts/init.sql ./
 
+COPY --from=builder /app/config/casbin/RESTful_model.conf ./config/casbin/
+COPY --from=builder /app/config/casbin/policy.csv ./config/casbin/
+
 # Expose the port
 EXPOSE 8080
 

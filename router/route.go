@@ -13,7 +13,7 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 	router.Use(gin.Recovery())
 
 	// Fix the path to your model file
-	enforcer, err := casbin.NewEnforcer("config/canbin/RESTful_model.conf", "config/policy.csv")
+	enforcer, err := casbin.NewEnforcer("config/casbin/RESTful_model.conf", "config/casbin/policy.csv")
 	if err != nil {
 		panic(err)
 	}
