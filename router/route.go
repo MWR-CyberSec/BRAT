@@ -2,46 +2,83 @@ package router
 
 import (
 	"github.com/Et43/BARK/config"
+	"github.com/Et43/BARK/middleware"
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
 )
 
 func InitRouter(init *config.Initialization) *gin.Engine {
-
-	db := config.InitDB()
-
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
-	enforcer, err := casbin.NewEnforcer("config/rbac_model.conf", db)
+	// Fix the path to your model file
+	enforcer, err := casbin.NewEnforcer("config/canbin/RESTful_model.conf", "config/policy.csv")
 	if err != nil {
 		panic(err)
 	}
 
-	// Policies
-	if hasPolicy, err := enforcer.HasPolicy("admin", "/api/user", "(GET)|(POST)|(PUT)|(DELETE)|(PATCH)"); !hasPolicy {
-		enforcer.AddPolicy("admin", "/api/user", "(GET)|(POST)|(PUT)|(DELETE)|(PATCH)")
-	} else if err != nil {
-		panic(err)
-	}
+	// Define your policies
+	enforcer.AddPolicy("admin", "/api/user", "GET")
+	enforcer.AddPolicy("admin", "/api/user", "POST")
+	enforcer.AddPolicy("admin", "/api/user", "PUT")
+	enforcer.AddPolicy("admin", "/api/user", "DELETE")
+	enforcer.AddPolicy("user", "/api/user", "GET")
 
-	if hasPolicy, err := enforcer.HasPolicy("user", "/api/user", "GET"); !hasPolicy {
-		enforcer.AddPolicy("admin", "/api/user", "GET")
-	} else if err != nil {
-		panic(err)
-	}
+	// Save the policy back to the file
+	enforcer.SavePolicy()
 
-	api := router.Group("/api")
+	// Create authorization middleware
+	authz := AuthMiddleware(enforcer)
+
+	// Public routes (no auth required)
+	auth := router.Group("/api/auth")
 	{
-		user := api.Group("/user")
+		auth.POST("/login", init.AuthCtrl.Login)
+		auth.POST("/register", init.AuthCtrl.Register)
+	}
+
+	// Protected routes (require auth)
+	api := router.Group("/api")
+	api.Use(middleware.JWTAuth()) // Apply JWT authentication to all API routes
+	{
+		// Apply Casbin authorization middleware to user group
+		user := api.Group("/user", authz)
 		user.GET("", init.UserCtrl.GetAllUserData)
 		user.POST("", init.UserCtrl.AddUserData)
-		user.GET("/:id", init.UserCtrl.GetUserById)
-		user.PUT("/:id", init.UserCtrl.UpdateUserData)
-		user.DELETE("/:id", init.UserCtrl.DeleteUser)
+		user.GET("/:userID", init.UserCtrl.GetUserById)
+		user.PUT("/:userID", init.UserCtrl.UpdateUserData)
+		user.DELETE("/:userID", init.UserCtrl.DeleteUser)
 	}
 
 	return router
+}
 
+// AuthMiddleware returns a Gin middleware for Casbin authorization
+func AuthMiddleware(enforcer *casbin.Enforcer) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get current user role from context (set by JWT middleware)
+		role, exists := c.Get("userRole")
+		if !exists {
+			c.AbortWithStatusJSON(401, gin.H{"error": "Unauthorized, no role found"})
+			return
+		}
+
+		path := c.Request.URL.Path
+		method := c.Request.Method
+
+		// Check if the user has permission
+		allowed, err := enforcer.Enforce(role, path, method)
+		if err != nil {
+			c.AbortWithStatusJSON(500, gin.H{"error": "Authorization error"})
+			return
+		}
+
+		if !allowed {
+			c.AbortWithStatusJSON(403, gin.H{"error": "Forbidden"})
+			return
+		}
+
+		c.Next()
+	}
 }

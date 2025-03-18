@@ -11,6 +11,7 @@ type UserRepository interface {
 	FindUserById(userID int) (dao.User, error)
 	Save(user *dao.User) (dao.User, error)
 	DeleteUserById(userID int) error
+	FindByEmail(email string) (dao.User, error)
 }
 
 type UserRepositoryImpl struct {
@@ -25,6 +26,16 @@ func (u UserRepositoryImpl) FindAllUser() ([]dao.User, error) {
 		return nil, err
 	}
 	return users, nil
+}
+
+func (u UserRepositoryImpl) FindByEmail(email string) (dao.User, error) {
+	var user dao.User
+	err := u.db.Where("email = ?", email).First(&user).Error
+	if err != nil {
+		log.Error(err)
+		return user, err
+	}
+	return user, nil
 }
 
 func (u UserRepositoryImpl) FindUserById(userID int) (dao.User, error) {

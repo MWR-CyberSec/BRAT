@@ -25,6 +25,10 @@ var userCtrlSet = wire.NewSet(controller.UserControllerInit,
 	wire.Bind(new(controller.UserController), new(*controller.UserControllerImpl)),
 )
 
+var authCtrlSet = wire.NewSet(controller.AuthControllerInit,
+	wire.Bind(new(controller.AuthController), new(*controller.AuthControllerImpl)),
+)
+
 func Init() *Initialization {
 	wire.Build(NewInitialization, db, userCtrlSet, userServiceSet, userRepoSet)
 	return nil
