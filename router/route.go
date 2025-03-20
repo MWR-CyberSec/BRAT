@@ -12,6 +12,8 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
+	router.LoadHTMLGlob("templates/*/**")
+
 	// Fix the path to your model file
 	enforcer, err := casbin.NewEnforcer("config/casbin/RESTful_model.conf", "config/casbin/policy.csv")
 	if err != nil {
@@ -31,14 +33,28 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 	// Create authorization middleware
 	authz := AuthMiddleware(enforcer)
 
-	// Public routes (no auth required)
+	/*
+	* API authentication routes
+	*
+	* /api/auth/login POST - Login route TODO: REMOVE MASS ASSIGNMENT VULN ()
+	* /api/auth/register POST - Register route
+	 */
 	auth := router.Group("/api/auth")
 	{
 		auth.POST("/login", init.AuthCtrl.Login)
 		auth.POST("/register", init.AuthCtrl.Register)
 	}
 
-	// Protected routes (require auth)
+	/*
+	*  API user management routes
+	*  All routes in this group require a valid JWT token
+	*  and are protected by Casbin authorization middleware
+	*
+	*  /api/user GET - Get all users (admin only) or show the current users data (normal useage))
+	*  /api/user POST - Add a new user (admin only)
+	*  /api/user/:userID GET - Get a user by ID (admin only)
+	*  /api/user/:userID PUT - Update a user by ID (admin only)
+	 */
 	api := router.Group("/api")
 	api.Use(middleware.JWTAuth()) // Apply JWT authentication to all API routes
 	{
