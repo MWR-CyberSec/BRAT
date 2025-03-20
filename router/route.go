@@ -67,6 +67,20 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 		user.DELETE("/:userID", init.UserCtrl.DeleteUser)
 	}
 
+	/*
+	* CORE routes
+	*
+	*	/ GET - Index route
+	 */
+	api.Use(middleware.JWTAuth()) // Apply JWT authentication to all API routes
+	{
+		user := api.Group("", authz)
+		user.GET("", func(c *gin.Context) {
+			c.HTML(200, "index.html", gin.H{})
+		})
+
+	}
+
 	return router
 }
 
