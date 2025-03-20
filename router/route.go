@@ -12,7 +12,18 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
-	router.LoadHTMLGlob("templates/*/**")
+	router.Static("/static", "./static")
+
+	templates := []string{
+		"templates/auth.tmpl",
+		"templates/base.tmpl",
+		"templates/components/*.tmpl",
+		"templates/modals/*.tmpl",
+	}
+
+	for _, pattern := range templates {
+		router.LoadHTMLGlob(pattern)
+	}
 
 	// Fix the path to your model file
 	enforcer, err := casbin.NewEnforcer("config/casbin/RESTful_model.conf", "config/casbin/policy.csv")
@@ -72,14 +83,18 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 	*
 	*	/ GET - Index route
 	 */
-	api.Use(middleware.JWTAuth()) // Apply JWT authentication to all API routes
-	{
-		user := api.Group("", authz)
-		user.GET("", func(c *gin.Context) {
-			c.HTML(200, "index.html", gin.H{})
-		})
+	router.GET("/", func(c *gin.Context) {
+		// Default values for stats if user is not authenticated
+		stats := gin.H{
+			"sessions": 0,
+			"clients":  0,
+		}
 
-	}
+		c.HTML(200, "base.tmpl", gin.H{
+			"message": "Welcome to BARK C2",
+			"stats":   stats,
+		})
+	})
 
 	return router
 }

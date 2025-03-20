@@ -13,6 +13,7 @@ build-docker:
 	-docker volume prune -f
 	-docker rm bark
 	-docker rmi bark
+	docker compose build --no-cache app
 	docker compose up -d
 
 
@@ -21,3 +22,8 @@ clean:
 	docker volume prune -f
 	-docker rmi bark-app
 	-docker rm bark
+
+rebuild-docker:
+	docker compose down
+	docker compose build app
+	docker compose up -d

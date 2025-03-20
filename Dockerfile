@@ -22,17 +22,40 @@ WORKDIR /root/
 # Install ca-certificates for HTTPS
 RUN apk --no-cache add ca-certificates
 
+# Create all required directories with explicit permissions
+RUN mkdir -p templates/components templates/modals static/css static/js config/casbin 
+RUN chmod -R 755 templates static config
+
 # Copy the binary from the builder stage
 COPY --from=builder /app/app .
 
-# Copy .env file if it exists (Docker will just warn if missing)
+# Copy .env file if it exists
 COPY --from=builder /app/.env ./ 
 
-# initialize the database
+# Copy database init script
 COPY --from=builder /app/build_scripts/init.sql ./
 
+# Explicitly copy templates with full paths
+COPY --from=builder /app/templates/base.tmpl ./templates/
+COPY --from=builder /app/templates/auth.tmpl ./templates/
+COPY --from=builder /app/templates/components/profile_card.tmpl ./templates/components/
+COPY --from=builder /app/templates/components/stats_card.tmpl ./templates/components/
+COPY --from=builder /app/templates/components/actions_card.tmpl ./templates/components/
+COPY --from=builder /app/templates/modals/profile_modal.tmpl ./templates/modals/
+COPY --from=builder /app/templates/modals/agents_modal.tmpl ./templates/modals/
+
+# Copy static assets
+COPY --from=builder /app/static/css/neon.css ./static/css/
+COPY --from=builder /app/static/js/main.js ./static/js/
+
+# Copy Casbin configuration
 COPY --from=builder /app/config/casbin/RESTful_model.conf ./config/casbin/
 COPY --from=builder /app/config/casbin/policy.csv ./config/casbin/
+
+# Debug - Print directory contents
+RUN ls -la ./templates
+RUN ls -la ./templates/components
+RUN ls -la ./templates/modals
 
 # Expose the port
 EXPOSE 8080

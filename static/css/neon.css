@@ -1,0 +1,334 @@
+:root {
+    --neon-text-color: #f40;
+    --neon-border-color: #08f;
+    --neon-highlight: #0ff;
+    --bg-color: #111;
+    --panel-bg: rgba(20, 20, 30, 0.8);
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: #fff;
+    background-image: 
+        linear-gradient(45deg, rgba(50, 10, 80, 0.2) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(50, 10, 80, 0.2) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(50, 10, 80, 0.2) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(50, 10, 80, 0.2) 75%);
+    background-size: 100px 100px;
+    background-position: 0 0, 0 50px, 50px -50px, -50px 0px;
+    overflow-x: hidden;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    padding: 30px 0;
+}
+
+h1 {
+    font-size: 4rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #fff;
+    text-shadow: 
+        0 0 5px var(--neon-text-color),
+        0 0 10px var(--neon-text-color),
+        0 0 20px var(--neon-text-color),
+        0 0 40px var(--neon-text-color);
+    margin: 0;
+    animation: flicker 3s infinite alternate;
+}
+
+@keyframes flicker {
+    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+        text-shadow: 
+            0 0 5px var(--neon-text-color),
+            0 0 10px var(--neon-text-color),
+            0 0 20px var(--neon-text-color),
+            0 0 40px var(--neon-text-color);
+    }
+    20%, 24%, 55% {
+        text-shadow: none;
+    }
+}
+
+.subtitle {
+    color: var(--neon-highlight);
+    font-size: 1.2rem;
+    letter-spacing: 0.1em;
+    margin-top: 10px;
+}
+
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 30px;
+    margin-top: 50px;
+}
+
+.card {
+    background-color: var(--panel-bg);
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 136, 255, 0.3);
+    padding: 25px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 
+        0 0 10px var(--neon-border-color),
+        0 0 20px var(--neon-border-color);
+}
+
+.card h3 {
+    color: var(--neon-highlight);
+    margin-top: 0;
+    font-size: 1.4rem;
+    border-bottom: 1px solid rgba(0, 136, 255, 0.3);
+    padding-bottom: 10px;
+}
+
+.card-content {
+    margin-top: 20px;
+}
+
+.auth-form {
+    max-width: 400px;
+    margin: 50px auto;
+    padding: 30px;
+    background-color: var(--panel-bg);
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 136, 255, 0.3);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--neon-highlight);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--neon-border-color);
+    border-radius: 5px;
+    color: #fff;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+    box-shadow: 0 0 10px var(--neon-border-color);
+}
+
+.btn {
+    display: inline-block;
+    padding: 12px 25px;
+    background-color: transparent;
+    color: var(--neon-highlight);
+    border: 1px solid var(--neon-border-color);
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    margin-right: 10px;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 136, 255, 0.3), transparent);
+    transition: all 0.5s ease;
+    z-index: -1;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn:hover {
+    box-shadow: 
+        0 0 10px var(--neon-border-color),
+        0 0 20px var(--neon-border-color);
+    color: #fff;
+}
+
+.app-info {
+    text-align: center;
+    margin-top: 50px;
+    padding: 30px;
+    background-color: var(--panel-bg);
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 136, 255, 0.3);
+}
+
+.auth-toggle {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.auth-toggle a {
+    color: var(--neon-highlight);
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.auth-toggle a:hover {
+    text-shadow: 0 0 10px var(--neon-highlight);
+}
+
+.nav-links {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.nav-links a {
+    color: #fff;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.nav-links a:hover {
+    background-color: rgba(0, 136, 255, 0.3);
+    text-shadow: 0 0 10px var(--neon-highlight);
+}
+
+#auth-panels {
+    position: relative;
+    height: 400px;
+}
+
+#login-panel, #register-panel {
+    position: absolute;
+    width: 100%;
+    transition: all 0.5s ease;
+}
+
+#register-panel {
+    opacity: 0;
+    transform: translateX(50px);
+    pointer-events: none;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.stat-item {
+    text-align: center;
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 2rem;
+    color: var(--neon-highlight);
+    font-weight: bold;
+}
+
+.stat-label {
+    color: #ccc;
+    font-size: 0.9rem;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    overflow: auto;
+}
+
+.modal-content {
+    background-color: var(--panel-bg);
+    margin: 10% auto;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 136, 255, 0.5);
+    width: 70%;
+    max-width: 700px;
+    animation: modalFadeIn 0.3s;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.close {
+    color: var(--neon-highlight);
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: #fff;
+    text-shadow: 0 0 10px var(--neon-highlight);
+}
+
+/* Table styles */
+.neon-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.neon-table th, .neon-table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid rgba(0, 136, 255, 0.3);
+}
+
+.neon-table th {
+    color: var(--neon-highlight);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.neon-table tr:hover {
+    background-color: rgba(0, 136, 255, 0.1);
+}

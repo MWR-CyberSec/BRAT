@@ -1,0 +1,24 @@
+{{ define "modals/agents_modal" }}
+<div id="agents-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Connected Agents</h3>
+        <div class="agents-list">
+            <table class="neon-table">
+                <thead>
+                    <tr>
+                        <th>Agent ID</th>
+                        <th>Hostname</th>
+                        <th>IP Address</th>
+                        <th>Last Check-in</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="agents-table-body">
+                    <!-- Will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{{ end }}
