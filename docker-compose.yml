@@ -32,6 +32,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/bark_c2
       - APPLICATION_NAME=BARK-C2
       - LOG_LEVEL=DEBUG
+      - JWT_SECRET=secret
     depends_on:
       db:
         condition: service_healthy
