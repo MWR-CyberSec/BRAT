@@ -1,2 +1,3 @@
 GET /api/user HTTP/1.1
 Host: localhost:8080
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJuYW1lIjoic3VwZXIiLCJlbWFpbCI6InN1cGVyQGdtYWlsLmNvbSIsInJvbGUiOiJhZG1pbiIsImV4cCI6MTc0MjQ5MDM4NiwiaWF0IjoxNzQyNDg2Nzg2fQ.jeF_TYo8syNLiWgqQszaMoPK8eXJC19h_ucN5WA6Csw

@@ -103,18 +103,45 @@ func (u UserServiceImpl) AddUserData(c *gin.Context) {
 }
 
 func (u UserServiceImpl) GetAllUserData(c *gin.Context) {
-
 	defer pkg.PanicHandler(c)
-
 	log.Info("GetAllUserData")
 
-	data, err := u.userRepository.FindAllUser()
+	// Get user role and ID from JWT context (set by JWTAuth middleware)
+	role, exists := c.Get("userRole")
+	if !exists {
+		log.Error("User role not found in context")
+		pkg.PanicException(constant.Unauthorised)
+		return
+	}
+
+	userID, exists := c.Get("userID")
+	if !exists {
+		log.Error("User ID not found in context")
+		pkg.PanicException(constant.Unauthorised)
+		return
+	}
+
+	// For admin users, return all users
+	if role.(string) == "admin" {
+		data, err := u.userRepository.FindAllUser()
+		if err != nil {
+			log.Error(err)
+			pkg.PanicException(constant.DataNotFound)
+		}
+		c.JSON(http.StatusOK, pkg.BuildResponse(constant.Success, data))
+		return
+	}
+
+	// For regular users, return only their own user data
+	data, err := u.userRepository.FindUserById(userID.(int))
 	if err != nil {
 		log.Error(err)
 		pkg.PanicException(constant.DataNotFound)
 	}
 
-	c.JSON(http.StatusOK, pkg.BuildResponse(constant.Success, data))
+	// Wrap single user in array to maintain consistent response format
+	users := []dao.User{data}
+	c.JSON(http.StatusOK, pkg.BuildResponse(constant.Success, users))
 }
 
 func (u UserServiceImpl) DeleteUser(c *gin.Context) {

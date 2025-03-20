@@ -3,7 +3,8 @@ Host: localhost:8080
 Content-Type: application/json
 
 {
-  "name": "Alice",
-  "email": "alicein@wonderland.com",
-  "password":"123456"
+  "name": "super",
+  "email": "super@gmail.com",
+  "password":"super123",
+  "role": "admin"
 }

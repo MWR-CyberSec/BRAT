@@ -3,6 +3,6 @@ Host: localhost:8080
 Content-Type: application/json
 
 {
-    "email": "alicein@wonderland.com",
-    "password": "123456"
+    "email": "admin@example.com",
+    "password": "admin123"
 }
