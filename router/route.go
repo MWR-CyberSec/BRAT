@@ -15,10 +15,7 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 	router.Static("/static", "./static")
 
 	templates := []string{
-		"templates/auth.tmpl",
-		"templates/base.tmpl",
-		"templates/components/*.tmpl",
-		"templates/modals/*.tmpl",
+		"templates/**/*",
 	}
 
 	for _, pattern := range templates {

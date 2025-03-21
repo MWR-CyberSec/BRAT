@@ -1,4 +1,3 @@
-{{ define "index" }}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BARK C2 Portal</title>
     <link rel="stylesheet" href="/static/css/neon.css">
+
+    <script>
+        console.log('Inline script executed at', new Date().toISOString());
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded from inline script');
+            const form = document.getElementById('login-form');
+            console.log('Login form element:', form);
+        });
+    </script>
+    
 </head>
 <body>
     <div class="container">
@@ -25,13 +34,13 @@
         <!-- Dashboard (hidden by default) -->
         <div id="dashboard" class="dashboard" style="display: none;">
             <!-- Profile Card -->
-            {{ template "components/profile_card" . }}
+            {{ template "profile_card" . }}
             
             <!-- Stats Card -->
-            {{ template "components/stats_card" . }}
+            {{ template "stats_card" . }}
             
             <!-- Actions Card -->
-            {{ template "components/actions_card" . }}
+            {{ template "actions_card" . }}
         </div>
         
         <!-- About Section -->
@@ -42,10 +51,9 @@
     </div>
 
     <!-- Modals -->
-    {{ template "modals/profile_modal" . }}
-    {{ template "modals/agents_modal" . }}
+    {{ template "profile_modal" . }}
+    {{ template "agents_modal" . }}
     
     <script src="/static/js/main.js"></script>
 </body>
 </html>
-{{ end }}

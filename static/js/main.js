@@ -1,5 +1,8 @@
-
 document.addEventListener('DOMContentLoaded', function() {
+
+    console.log('main.js loaded at', new Date().toISOString());
+
+
     // Check if user is already logged in (has token in localStorage)
     const token = localStorage.getItem('jwt_token');
     if (token) {
@@ -8,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Toggle between login and register forms
-    document.getElementById('show-register').addEventListener('click', function(e) {
+    document.getElementById('show-register')?.addEventListener('click', function(e) {
         e.preventDefault();
         document.getElementById('login-panel').style.opacity = '0';
         document.getElementById('login-panel').style.transform = 'translateX(-50px)';
@@ -21,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     });
     
-    document.getElementById('show-login').addEventListener('click', function(e) {
+    document.getElementById('show-login')?.addEventListener('click', function(e) {
         e.preventDefault();
         document.getElementById('register-panel').style.opacity = '0';
         document.getElementById('register-panel').style.transform = 'translateX(50px)';
@@ -33,12 +36,17 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('login-panel').style.pointerEvents = 'auto';
         }, 300);
     });
+
+    const loginForm = document.getElementById('login-form');
+    console.log('Login form found:', !!loginForm);
     
     // Login form handling
-    document.getElementById('login-form').addEventListener('submit', function(e) {
+    document.getElementById('login-form')?.addEventListener('submit', function(e) {
+        console.log("Login form submitted"); // Debug
         e.preventDefault();
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
+        console.log("Email:", email, "Password length:", password.length); // Debug
         
         fetch('/api/auth/login', {
             method: 'POST',
@@ -47,24 +55,44 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             body: JSON.stringify({ email, password })
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log("Response status:", response.status); // Debug
+            return response.json();
+        })
         .then(data => {
-            if (data.status === 'success') {
+            console.log("Login response data:", data); // Debug
+            console.log("response_key:", data.response_key); // Debug specific values
+            console.log("data.data:", data.data); // Debug specific values
+            
+            if (data.response_key !== "SUCCESS") {
+                console.error("Failed login attempt:", data.response_message);
+                alert("Login failed: " + (data.response_message || "Unauthorized"));
+            }
+
+            if (data && data.response_key === "SUCCESS" && data.data && data.data.token) {
+                console.log("Success branch taken"); // Debug
                 localStorage.setItem('jwt_token', data.data.token);
+                
+                if (data.data.user) {
+                    console.log("Updating user profile"); // Debug
+                    updateUserProfile(data.data.user);
+                }
+                
+                console.log("About to show dashboard"); // Debug
                 showDashboard();
-                updateUserProfile(data.data.user);
             } else {
-                alert('Login failed: ' + data.message);
+                console.error("Failed branch taken - unexpected response structure:", data);
+                alert("Login failed: " + (data.response_message || "Unexpected response"));
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred during login');
+            console.error('Error during login:', error);
+            alert('An error occurred during login. Please try again.');
         });
     });
     
     // Register form handling
-    document.getElementById('register-form').addEventListener('submit', function(e) {
+    document.getElementById('register-form')?.addEventListener('submit', function(e) {
         e.preventDefault();
         const name = document.getElementById('register-name').value;
         const email = document.getElementById('register-email').value;
@@ -79,119 +107,65 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            if (data.status === 'success') {
+            console.log("Register response:", data); // Debug output
+            
+            if (data && data.data && data.data.token) {
                 localStorage.setItem('jwt_token', data.data.token);
+                
+                if (data.data.user) {
+                    updateUserProfile(data.data.user);
+                }
+                
                 showDashboard();
-                updateUserProfile(data.data.user);
             } else {
-                alert('Registration failed: ' + data.message);
+                console.error("Unexpected response structure:", data);
+                alert("Registration failed: Unexpected response from server");
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred during registration');
+            console.error('Error during registration:', error);
+            alert('An error occurred during registration. Please try again.');
         });
     });
     
     // Logout button
-    document.getElementById('logout-btn').addEventListener('click', function() {
+    document.getElementById('logout-btn')?.addEventListener('click', function() {
         localStorage.removeItem('jwt_token');
         hideDashboard();
-    });
-    
-    // Modal handling
-    const modals = document.querySelectorAll('.modal');
-    const closeButtons = document.querySelectorAll('.close');
-    
-    // Edit profile button
-    document.getElementById('edit-profile-btn').addEventListener('click', function() {
-        document.getElementById('profile-modal').style.display = 'block';
-        
-        // Populate form with current user data
-        const userName = document.getElementById('user-name').textContent;
-        const userEmail = document.getElementById('user-email').textContent;
-        
-        document.getElementById('edit-name').value = userName;
-        document.getElementById('edit-email').value = userEmail;
-    });
-    
-    // View agents button
-    document.getElementById('view-agents-btn').addEventListener('click', function() {
-        document.getElementById('agents-modal').style.display = 'block';
-        fetchAgents();
-    });
-    
-    // Close buttons for modals
-    closeButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            modals.forEach(modal => {
-                modal.style.display = 'none';
-            });
-        });
-    });
-    
-    // Close modal when clicking outside
-    window.addEventListener('click', function(event) {
-        modals.forEach(modal => {
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-    });
-    
-    // Edit profile form submission
-    document.getElementById('edit-profile-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const name = document.getElementById('edit-name').value;
-        const email = document.getElementById('edit-email').value;
-        const password = document.getElementById('edit-password').value;
-        
-        const updateData = { name, email };
-        if (password) {
-            updateData.password = password;
-        }
-        
-        const token = localStorage.getItem('jwt_token');
-        fetch('/api/user', {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
-            },
-            body: JSON.stringify(updateData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert('Profile updated successfully');
-                document.getElementById('profile-modal').style.display = 'none';
-                updateUserProfile(data.data);
-            } else {
-                alert('Failed to update profile: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while updating profile');
-        });
     });
 });
 
 // Helper functions
 function showDashboard() {
-    document.getElementById('auth-panels').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'grid';
+    const authPanels = document.getElementById('auth-panels');
+    const dashboard = document.getElementById('dashboard');
+    
+    if (authPanels) authPanels.style.display = 'none';
+    if (dashboard) dashboard.style.display = 'grid';
+    
+    console.log("Dashboard shown");
 }
 
 function hideDashboard() {
-    document.getElementById('auth-panels').style.display = 'block';
-    document.getElementById('dashboard').style.display = 'none';
+    const authPanels = document.getElementById('auth-panels');
+    const dashboard = document.getElementById('dashboard');
+    
+    if (authPanels) authPanels.style.display = 'block';
+    if (dashboard) dashboard.style.display = 'none';
+    
+    console.log("Dashboard hidden");
 }
 
 function updateUserProfile(user) {
-    document.getElementById('user-name').textContent = user.name;
-    document.getElementById('user-email').textContent = user.email;
-    document.getElementById('user-role').textContent = user.role;
+    const nameElement = document.getElementById('user-name');
+    const emailElement = document.getElementById('user-email');
+    const roleElement = document.getElementById('user-role');
+    
+    if (nameElement) nameElement.textContent = user.name || '-';
+    if (emailElement) emailElement.textContent = user.email || '-';
+    if (roleElement) roleElement.textContent = user.role || '-';
+    
+    console.log("User profile updated:", user);
 }
 
 function fetchUserProfile(token) {
@@ -201,65 +175,26 @@ function fetchUserProfile(token) {
             'Authorization': 'Bearer ' + token
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to fetch user profile');
+        }
+        return response.json();
+    })
     .then(data => {
-        if (data.status === 'success') {
+        console.log("User profile data:", data); // Debug output
+        
+        if (data && data.data && data.data.length > 0) {
             updateUserProfile(data.data[0]);
         } else {
-            alert('Failed to load user profile: ' + data.message);
+            console.error("Unexpected user profile data structure:", data);
             localStorage.removeItem('jwt_token');
             hideDashboard();
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('Error fetching user profile:', error);
         localStorage.removeItem('jwt_token');
         hideDashboard();
-    });
-}
-
-function fetchAgents() {
-    const token = localStorage.getItem('jwt_token');
-    fetch('/api/agents', {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            populateAgentsTable(data.data);
-        } else {
-            alert('Failed to load agents: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred while fetching agents');
-    });
-}
-
-function populateAgentsTable(agents) {
-    const tableBody = document.getElementById('agents-table-body');
-    tableBody.innerHTML = '';
-    
-    if (agents.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No agents connected</td></tr>';
-        return;
-    }
-    
-    agents.forEach(agent => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${agent.id}</td>
-            <td>${agent.hostname}</td>
-            <td>${agent.ip_address}</td>
-            <td>${new Date(agent.last_checkin).toLocaleString()}</td>
-            <td>
-                <button class="btn btn-small">Connect</button>
-            </td>
-        `;
-        tableBody.appendChild(row);
     });
 }

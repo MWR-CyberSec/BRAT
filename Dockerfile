@@ -23,7 +23,7 @@ WORKDIR /root/
 RUN apk --no-cache add ca-certificates
 
 # Create all required directories with explicit permissions
-RUN mkdir -p templates/components templates/modals static/css static/js config/casbin 
+RUN mkdir -p templates/components templates/modals static/css static/js config/casbin templates/core
 RUN chmod -R 755 templates static config
 
 # Copy the binary from the builder stage
@@ -36,8 +36,8 @@ COPY --from=builder /app/.env ./
 COPY --from=builder /app/build_scripts/init.sql ./
 
 # Explicitly copy templates with full paths
-COPY --from=builder /app/templates/base.tmpl ./templates/
-COPY --from=builder /app/templates/auth.tmpl ./templates/
+COPY --from=builder /app/templates/core/base.tmpl ./templates/core/
+COPY --from=builder /app/templates/core/auth.tmpl ./templates/core/
 COPY --from=builder /app/templates/components/profile_card.tmpl ./templates/components/
 COPY --from=builder /app/templates/components/stats_card.tmpl ./templates/components/
 COPY --from=builder /app/templates/components/actions_card.tmpl ./templates/components/
