@@ -1,11 +1,19 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/Et43/BARK/config"
 	"github.com/Et43/BARK/middleware"
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
 
 func InitRouter(init *config.Initialization) *gin.Engine {
 	router := gin.New()
@@ -91,6 +99,36 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 			"message": "Welcome to BARK C2",
 			"stats":   stats,
 		})
+	})
+
+	/*
+	* WEBSOCKET routes
+	*
+	* /ws GET - Websocket route
+	 */
+	router.GET("/ws", func(c *gin.Context) {
+		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer conn.Close()
+
+		for {
+			// Read message from browser
+			messageType, p, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+
+			// Print the message to the console
+			println(string(p))
+
+			// Write message back to browser
+			if err := conn.WriteMessage(messageType, p); err != nil {
+				return
+			}
+		}
 	})
 
 	return router
