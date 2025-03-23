@@ -131,9 +131,15 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 			}
 
 			var message map[string]interface{}
+			if err := json.Unmarshal(msg, &message); err != nil {
+				// Not JSON, treat as plain text
+				println("Received non-JSON message: %s", string(msg))
+				continue
+			}
 
 			// Check if it's a stager registration
 			messageType, ok := message["type"].(string)
+			println("Message recieved: %v", message)
 			if ok && messageType == "stager_registration" {
 				println("Agent stager connected: %v", message["agentId"])
 
