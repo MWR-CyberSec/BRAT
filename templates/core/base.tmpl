@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BARK C2 Portal</title>
+    <link rel="stylesheet" href="/static/css/neon.css">
+
+    <script>
+        console.log('Inline script executed at', new Date().toISOString());
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded from inline script');
+            const form = document.getElementById('login-form');
+            console.log('Login form element:', form);
+        });
+    </script>
+    
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>BARK C2</h1>
+            <p class="subtitle">Command & Control Portal</p>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="#" id="dashboard-link">Dashboard</a>
+                <a href="#about">About</a>
+            </div>
+        </header>
+        
+        <!-- Login/Register Component -->
+        {{ template "auth" . }}
+        
+        <!-- Dashboard (hidden by default) -->
+        <div id="dashboard" class="dashboard" style="display: none;">
+            <!-- Profile Card -->
+            {{ template "profile_card" . }}
+            
+            <!-- Stats Card -->
+            {{ template "stats_card" . }}
+            
+            <!-- Actions Card -->
+            {{ template "actions_card" . }}
+        </div>
+        
+        <!-- About Section -->
+        <div class="app-info" id="about">
+            <h3>About BARK C2</h3>
+            <p>BARK C2 is a command and control system from which truly persistent XSS agents can be managed :)</p>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    {{ template "profile_modal" . }}
+    {{ template "agents_modal" . }}
+    
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
