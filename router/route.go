@@ -3,6 +3,10 @@ package router
 import (
 	"net/http"
 
+	"encoding/json"
+	"time"
+
+	"github.com/Et43/BARK/agent"
 	"github.com/Et43/BARK/config"
 	"github.com/Et43/BARK/middleware"
 	"github.com/casbin/casbin/v2"
@@ -120,18 +124,45 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 		defer conn.Close()
 
 		for {
-			// Read message from browser
-			messageType, p, err := conn.ReadMessage()
+			_, msg, err := conn.ReadMessage()
 			if err != nil {
+				println("Error reading message: %v", err)
 				return
 			}
 
-			// Print the message to the console
-			println(string(p))
+			var message map[string]interface{}
 
-			// Write message back to browser
-			if err := conn.WriteMessage(messageType, p); err != nil {
-				return
+			// Check if it's a stager registration
+			messageType, ok := message["type"].(string)
+			if ok && messageType == "stager_registration" {
+				println("Agent stager connected: %v", message["agentId"])
+
+				agentPayload := agent.GetAgentPayload()
+				// Send back the agent payload
+				payload := map[string]interface{}{
+					"type":      "agent_payload",
+					"timestamp": time.Now().Format(time.RFC3339),
+					"payload":   agentPayload,
+				}
+
+				payloadJson, _ := json.Marshal(payload)
+				if err := conn.WriteMessage(websocket.TextMessage, payloadJson); err != nil {
+					println("Error sending payload: %v", err)
+					return
+				}
+
+				println("Payload sent to agent: %v", message["agentId"])
+			} else if ok && messageType == "payload_received" {
+				println("Agent confirmed payload receipt: %v", message)
+			} else {
+				// Handle other message types
+				println("Received message: %v", message)
+
+				// Echo the message back
+				if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+					println("Error echoing message: %v", err)
+					return
+				}
 			}
 		}
 	})
