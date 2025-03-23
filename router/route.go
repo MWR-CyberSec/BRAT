@@ -13,6 +13,9 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
 func InitRouter(init *config.Initialization) *gin.Engine {
@@ -108,7 +111,9 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 	 */
 	router.GET("/ws", func(c *gin.Context) {
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+		println("Connection requested")
 		if err != nil {
+			println(err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}

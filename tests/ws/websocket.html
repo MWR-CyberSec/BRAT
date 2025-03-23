@@ -128,7 +128,7 @@
         connectBtn.addEventListener('click', function() {
             // Use the current hostname for WebSocket connection
             const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${location.host}/ws`;
+            const wsUrl = `ws://localhost:8080/ws`;
             
             appendLog(`Connecting to ${wsUrl}`);
             
