@@ -6,6 +6,7 @@ init-dependency:
 	go get -u gorm.io/driver/postgres
 	go get -u github.com/sirupsen/logrus
 	go get -u github.com/joho/godotenv
+	go get -u github.com/gorilla/websocket
 
 
 build-docker:

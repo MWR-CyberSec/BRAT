@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #111;
+            color: #fff;
+        }
+        .container {
+            background-color: rgba(20, 20, 30, 0.8);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 136, 255, 0.3);
+        }
+        h1 {
+            color: #08f;
+        }
+        #log {
+            height: 300px;
+            overflow-y: auto;
+            background-color: #222;
+            color: #0f0;
+            border: 1px solid #444;
+            padding: 10px;
+            font-family: monospace;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        input[type="text"], button {
+            padding: 8px;
+            border-radius: 5px;
+        }
+        input[type="text"] {
+            width: 70%;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+        }
+        button {
+            background-color: #08f;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        button:hover {
+            background-color: #06c;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .connected {
+            background-color: rgba(0, 128, 0, 0.2);
+            color: #0f0;
+        }
+        .disconnected {
+            background-color: rgba(255, 0, 0, 0.2);
+            color: #f00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSocket Tester</h1>
+        
+        <div id="status" class="status disconnected">Disconnected</div>
+        
+        <div class="form-group">
+            <button id="connect">Connect</button>
+            <button id="disconnect" disabled>Disconnect</button>
+        </div>
+        
+        <div id="log"></div>
+        
+        <div class="form-group">
+            <input type="text" id="message" placeholder="Type a message..." disabled>
+            <button id="send" disabled>Send</button>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        const log = document.getElementById('log');
+        const statusDiv = document.getElementById('status');
+        const connectBtn = document.getElementById('connect');
+        const disconnectBtn = document.getElementById('disconnect');
+        const messageInput = document.getElementById('message');
+        const sendBtn = document.getElementById('send');
+        
+        function appendLog(message, isError = false) {
+            const entry = document.createElement('div');
+            entry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            if (isError) {
+                entry.style.color = '#f55';
+            }
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight; // Auto-scroll to bottom
+        }
+        
+        function setConnected(connected) {
+            if (connected) {
+                statusDiv.textContent = 'Connected';
+                statusDiv.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+            } else {
+                statusDiv.textContent = 'Disconnected';
+                statusDiv.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+            }
+        }
+        
+        connectBtn.addEventListener('click', function() {
+            // Use the current hostname for WebSocket connection
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `ws://localhost:8080/ws`;
+            
+            appendLog(`Connecting to ${wsUrl}`);
+            
+            try {
+                socket = new WebSocket(wsUrl);
+                
+                socket.onopen = function(event) {
+                    appendLog('WebSocket connection established');
+                    setConnected(true);
+                };
+                
+                socket.onmessage = function(event) {
+                    appendLog(`Received: ${event.data}`);
+                };
+                
+                socket.onclose = function(event) {
+                    appendLog(`WebSocket connection closed: ${event.reason || 'No reason provided'}`, true);
+                    socket = null;
+                    setConnected(false);
+                };
+                
+                socket.onerror = function(error) {
+                    appendLog('WebSocket error', true);
+                    console.error(error);
+                };
+            } catch (error) {
+                appendLog(`Error creating WebSocket: ${error.message}`, true);
+            }
+        });
+        
+        disconnectBtn.addEventListener('click', function() {
+            if (socket) {
+                appendLog('Disconnecting...');
+                socket.close();
+                socket = null;
+                setConnected(false);
+            }
+        });
+        
+        sendBtn.addEventListener('click', function() {
+            sendMessage();
+        });
+        
+        messageInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        function sendMessage() {
+            const message = messageInput.value;
+            if (socket && message) {
+                appendLog(`Sending: ${message}`);
+                socket.send(message);
+                messageInput.value = '';
+            }
+        }
+    </script>
+</body>
+</html>
