@@ -7,6 +7,7 @@ init-dependency:
 	go get -u github.com/sirupsen/logrus
 	go get -u github.com/joho/godotenv
 	go get -u github.com/gorilla/websocket
+	go get -u github.com/air-verse/air@latest
 
 
 build-docker:
@@ -28,3 +29,7 @@ rebuild-docker:
 	docker compose down
 	docker compose build app
 	docker compose up -d
+
+build-db:
+	docker compose down
+	docker compose up -d db
