@@ -15,9 +15,17 @@ func init() {
 
 func main() {
 	port := os.Getenv("PORT")
+	is_debug := os.Getenv("DEBUG")
+	host := ""
+	if is_debug == "true" {
+		host = "localhost"
+		println("[! BRAT !] Running in debug mode")
+	} else {
+		host = "0.0.0.0"
+	}
 
 	init := config.Init()
 	app := router.InitRouter(init)
 
-	app.Run(":" + port)
+	app.Run(host + ":" + port)
 }
