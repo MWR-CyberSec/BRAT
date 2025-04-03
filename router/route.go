@@ -126,7 +126,7 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 		for {
 			_, msg, err := conn.ReadMessage()
 			if err != nil {
-				println("Error reading message: %v", err)
+				println("Error reading message: ", err.Error())
 				return
 			}
 
@@ -139,9 +139,8 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 
 			// Check if it's a stager registration
 			messageType, ok := message["type"].(string)
-			println("Message recieved: %v", message)
 			if ok && messageType == "stager_registration" {
-				println("Agent stager connected: %v", message["agentId"])
+				println("Agent stager connected: ", message["agentId"].(string))
 
 				agentPayload := agent.GetAgentPayload()
 				// Send back the agent payload
@@ -153,20 +152,20 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 
 				payloadJson, _ := json.Marshal(payload)
 				if err := conn.WriteMessage(websocket.TextMessage, payloadJson); err != nil {
-					println("Error sending payload: %v", err)
+					println("Error sending payload: ", err.Error())
 					return
 				}
 
-				println("Payload sent to agent: %v", message["agentId"])
+				println("Main agent payload sent to stager: ", message["agentId"].(string))
 			} else if ok && messageType == "payload_received" {
-				println("Agent confirmed payload receipt: %v", message)
+				println("Agent confirmed payload receipt: ", message["type"].(string), message["status"].(string))
 			} else {
 				// Handle other message types
 				println("Received message: %v", message)
 
 				// Echo the message back
 				if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
-					println("Error echoing message: %v", err)
+					println("Error echoing message: ", err.Error())
 					return
 				}
 			}

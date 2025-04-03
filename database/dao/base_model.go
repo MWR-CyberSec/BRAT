@@ -20,3 +20,12 @@ type User struct {
 	Password string `gorm:"column:password" json:"-"` // Hmm this is apprently how yo udo it idfk
 	Role     string `gorm:"column:role;default:user" json:"role"`
 }
+
+type Agent struct {
+	BaseModel
+	ID       int    `gorm:"column:id; primary_key; not null" json:"id"`
+	Name     string `gorm:"column:name" json:"name"`
+	IsStager bool   `gorm:"column:is_stager" json:"is_stager"`
+	SourceIP string `gorm:"column:source" json:"source"` // This is the source IP of the agent
+
+}
