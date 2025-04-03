@@ -2,14 +2,17 @@
 <div class="card">
     <h3>System Stats</h3>
     <div class="card-content">
+        <div class="cyber-status-line">NETWORK: <span class="cyber-status online">ONLINE</span></div>
         <div class="stats">
             <div class="stat-item">
                 <div class="stat-value">{{ .stats.sessions }}</div>
                 <div class="stat-label">Active Sessions</div>
+                <div class="stat-bar" style="--fill-level: {{ .stats.sessions }}%;"></div>
             </div>
             <div class="stat-item">
                 <div class="stat-value">{{ .stats.clients }}</div>
                 <div class="stat-label">Connected Clients</div>
+                <div class="stat-bar" style="--fill-level: {{ .stats.clients }}%;"></div>
             </div>
         </div>
     </div>
