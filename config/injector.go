@@ -1,4 +1,3 @@
-// go:build wireinject
 //go:build wireinject
 // +build wireinject
 
@@ -13,23 +12,35 @@ import (
 
 var db = wire.NewSet(InitDB)
 
-var userServiceSet = wire.NewSet(service.UserServiceInit,
-	wire.Bind(new(service.UserService), new(*service.UserServiceImpl)),
-)
+var userServiceSet = wire.NewSet(service.UserServiceInit, wire.Bind(new(service.UserService), new(*service.UserServiceImpl)))
 
-var userRepoSet = wire.NewSet(repository.UserRepositoryInit,
-	wire.Bind(new(repository.UserRepository), new(*repository.UserRepositoryImpl)),
-)
+var userRepoSet = wire.NewSet(repository.UserRepositoryInit, wire.Bind(new(repository.UserRepository), new(*repository.UserRepositoryImpl)))
 
-var userCtrlSet = wire.NewSet(controller.UserControllerInit,
-	wire.Bind(new(controller.UserController), new(*controller.UserControllerImpl)),
-)
+var userCtrlSet = wire.NewSet(controller.UserControllerInit, wire.Bind(new(controller.UserController), new(*controller.UserControllerImpl)))
 
-var authCtrlSet = wire.NewSet(controller.AuthControllerInit,
-	wire.Bind(new(controller.AuthController), new(*controller.AuthControllerImpl)),
-)
+// Add the missing AuthService provider
+var authServiceSet = wire.NewSet(service.AuthServiceInit, wire.Bind(new(service.AuthService), new(*service.AuthServiceImpl)))
+
+var authCtrlSet = wire.NewSet(controller.AuthControllerInit, wire.Bind(new(controller.AuthController), new(*controller.AuthControllerImpl)))
+
+var agentRepoSet = wire.NewSet(repository.AgentRepositoryInit, wire.Bind(new(repository.AgentRepository), new(*repository.AgentRepositoryImpl)))
+
+var agentServiceSet = wire.NewSet(service.AgentServiceInit, wire.Bind(new(service.AgentService), new(*service.AgentServiceImpl)))
+
+var agentCtrlSet = wire.NewSet(controller.AgentControllerInit, wire.Bind(new(controller.AgentController), new(*controller.AgentControllerImpl)))
 
 func Init() *Initialization {
-	wire.Build(NewInitialization, db, userCtrlSet, userServiceSet, userRepoSet)
+	wire.Build(
+		db,
+		userRepoSet,
+		agentRepoSet,
+		userServiceSet,
+		authServiceSet, // Add this line
+		agentServiceSet,
+		userCtrlSet,
+		authCtrlSet,
+		agentCtrlSet,
+		NewInitialization,
+	)
 	return nil
 }

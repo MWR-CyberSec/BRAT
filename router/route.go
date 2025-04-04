@@ -8,6 +8,7 @@ import (
 
 	"github.com/Et43/BARK/agent"
 	"github.com/Et43/BARK/config"
+	"github.com/Et43/BARK/database/dao"
 	"github.com/Et43/BARK/middleware"
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
@@ -109,6 +110,15 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 	})
 
 	/*
+	* AGENT routes
+	*
+	 */
+	agentRoute := router.Group("/agents")
+	agentRoute.GET("", init.AgentCtrl.GetAgents)
+	agentRoute.GET("/:agentID", init.AgentCtrl.GetAgentByID)
+	agentRoute.GET("/stagers", init.AgentCtrl.GetStagers)
+
+	/*
 	* WEBSOCKET routes
 	*
 	* /ws GET - Websocket route
@@ -143,6 +153,19 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 				println("Agent stager connected: ", message["agentId"].(string))
 
 				agentPayload := agent.GetAgentPayload()
+				//systemInfo, _ := json.Marshal(message["systemInfo"])
+
+				newAgent := &dao.Agent{
+					Name:     message["agentId"].(string),
+					SourceIP: c.ClientIP(),
+					IsStager: true,
+				}
+
+				init.AgentCtrl.CreateAgent(newAgent)
+
+				// If CreateAgent has internal error handling, no need to check for err here
+				println("Agent created successfully")
+
 				// Send back the agent payload
 				payload := map[string]interface{}{
 					"type":      "agent_payload",

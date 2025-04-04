@@ -1,13 +1,14 @@
 package controller
 
 import (
+	"github.com/Et43/BARK/database/dao"
 	"github.com/Et43/BARK/service"
 	"github.com/gin-gonic/gin"
 )
 
 type AgentController interface {
 	GetAgents(*gin.Context)
-	CreateAgent(*gin.Context)
+	CreateAgent(*dao.Agent)
 	GetAgentByID(*gin.Context)
 	GetStagers(*gin.Context)
 	SetStager(*gin.Context)
@@ -21,8 +22,8 @@ func (u *AgentControllerImpl) GetAgents(c *gin.Context) {
 	u.agentService.GetAgents(c)
 }
 
-func (u *AgentControllerImpl) CreateAgent(c *gin.Context) {
-	u.agentService.CreateAgent(c)
+func (u *AgentControllerImpl) CreateAgent(agent *dao.Agent) {
+	u.agentService.CreateAgent(agent)
 }
 
 func (u *AgentControllerImpl) GetAgentByID(c *gin.Context) {
@@ -37,6 +38,8 @@ func (u *AgentControllerImpl) SetStager(c *gin.Context) {
 	u.agentService.SetStager(c)
 }
 
-func NewAgentController(agentService service.AgentService) AgentController {
+// Remove NewAgentController to avoid the double binding issue
+// Keep only AgentControllerInit
+func AgentControllerInit(agentService service.AgentService) *AgentControllerImpl {
 	return &AgentControllerImpl{agentService: agentService}
 }

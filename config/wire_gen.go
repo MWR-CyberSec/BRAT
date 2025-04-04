@@ -17,17 +17,15 @@ import (
 
 func Init() *Initialization {
 	gormDB := InitDB()
-
-	userRepository := repository.UserRepositoryInit(gormDB)
-
-	authSrvc := service.AuthServiceInit(userRepository)
-
-	authControllerImpl := controller.AuthControllerInit(authSrvc)
 	userRepositoryImpl := repository.UserRepositoryInit(gormDB)
 	userServiceImpl := service.UserServiceInit(userRepositoryImpl)
 	userControllerImpl := controller.UserControllerInit(userServiceImpl)
-	
-	initialization := NewInitialization(userRepositoryImpl, userServiceImpl, userControllerImpl, authControllerImpl)
+	authServiceImpl := service.AuthServiceInit(userRepositoryImpl)
+	authControllerImpl := controller.AuthControllerInit(authServiceImpl)
+	agentRepositoryImpl := repository.AgentRepositoryInit(gormDB)
+	agentServiceImpl := service.AgentServiceInit(agentRepositoryImpl)
+	agentControllerImpl := controller.AgentControllerInit(agentServiceImpl)
+	initialization := NewInitialization(userRepositoryImpl, userServiceImpl, userControllerImpl, authControllerImpl, agentControllerImpl)
 	return initialization
 }
 
@@ -41,4 +39,13 @@ var userRepoSet = wire.NewSet(repository.UserRepositoryInit, wire.Bind(new(repos
 
 var userCtrlSet = wire.NewSet(controller.UserControllerInit, wire.Bind(new(controller.UserController), new(*controller.UserControllerImpl)))
 
+// Add the missing AuthService provider
+var authServiceSet = wire.NewSet(service.AuthServiceInit, wire.Bind(new(service.AuthService), new(*service.AuthServiceImpl)))
+
 var authCtrlSet = wire.NewSet(controller.AuthControllerInit, wire.Bind(new(controller.AuthController), new(*controller.AuthControllerImpl)))
+
+var agentRepoSet = wire.NewSet(repository.AgentRepositoryInit, wire.Bind(new(repository.AgentRepository), new(*repository.AgentRepositoryImpl)))
+
+var agentServiceSet = wire.NewSet(service.AgentServiceInit, wire.Bind(new(service.AgentService), new(*service.AgentServiceImpl)))
+
+var agentCtrlSet = wire.NewSet(controller.AgentControllerInit, wire.Bind(new(controller.AgentController), new(*controller.AgentControllerImpl)))

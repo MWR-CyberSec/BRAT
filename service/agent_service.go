@@ -12,7 +12,7 @@ import (
 
 type AgentService interface {
 	GetAgents(*gin.Context)
-	CreateAgent(*gin.Context)
+	CreateAgent(*dao.Agent)
 	GetAgentByID(*gin.Context)
 	GetStagers(*gin.Context)
 	SetStager(*gin.Context)
@@ -22,7 +22,7 @@ type AgentServiceImpl struct {
 	agentsRepository repository.AgentRepository
 }
 
-func (s AgentServiceImpl) GetAgents(c *gin.Context) {
+func (s *AgentServiceImpl) GetAgents(c *gin.Context) {
 	agents, err := s.agentsRepository.GetAll()
 	if err != nil {
 		log.Error(err)
@@ -32,31 +32,12 @@ func (s AgentServiceImpl) GetAgents(c *gin.Context) {
 	c.JSON(http.StatusOK, agents)
 }
 
-func (s AgentServiceImpl) CreateAgent(c *gin.Context) {
-	var request dao.Agent
-	if err := c.ShouldBindJSON(&request); err != nil {
-		log.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
-		return
-	}
-
-	if request.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
-		return
-	}
-
-	if request.SourceIP == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "source IP is required"})
-		return
-	}
-
-	s.agentsRepository.CreateAgent(&request)
-
-	c.JSON(http.StatusCreated, request)
+func (s *AgentServiceImpl) CreateAgent(c *dao.Agent) {
+	s.agentsRepository.CreateAgent(c)
 }
 
-func (s AgentServiceImpl) GetAgentByID(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+func (s *AgentServiceImpl) GetAgentByID(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("agentID"))
 	if err != nil {
 		log.Error(err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
@@ -76,7 +57,7 @@ func (s AgentServiceImpl) GetAgentByID(c *gin.Context) {
 	c.JSON(http.StatusOK, agent)
 }
 
-func (s AgentServiceImpl) GetStagers(c *gin.Context) {
+func (s *AgentServiceImpl) GetStagers(c *gin.Context) {
 	stagers, err := s.agentsRepository.GetStagers()
 	if err != nil {
 		log.Error(err)
@@ -84,6 +65,35 @@ func (s AgentServiceImpl) GetStagers(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, stagers)
+}
+
+// Add the missing SetStager implementation
+func (s *AgentServiceImpl) SetStager(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("agentID"))
+	if err != nil {
+		log.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
+		return
+	}
+
+	var request struct {
+		IsStager bool `json:"is_stager"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		log.Error(err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	err = s.agentsRepository.SetStager(id, request.IsStager)
+	if err != nil {
+		log.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update stager status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "stager status updated"})
 }
 
 func AgentServiceInit(agentsRepository repository.AgentRepository) *AgentServiceImpl {

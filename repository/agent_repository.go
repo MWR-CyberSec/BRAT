@@ -7,19 +7,23 @@ import (
 	"gorm.io/gorm"
 )
 
-type AgentRepository struct {
+type AgentRepository interface {
+	CreateAgent(agent *dao.Agent) error
+	GetAgentByID(id int) (*dao.Agent, error)
+	GetAll() ([]dao.Agent, error)
+	SetStager(id int, isStager bool) error
+	GetStagers() ([]dao.Agent, error)
+}
+
+type AgentRepositoryImpl struct {
 	db *gorm.DB
 }
 
-func AgentRepositoryImpl(db *gorm.DB) *AgentRepository {
-	return &AgentRepository{db: db}
-}
-
-func (r *AgentRepository) CreateAgent(agent *dao.Agent) error {
+func (r *AgentRepositoryImpl) CreateAgent(agent *dao.Agent) error {
 	return r.db.Create(agent).Error
 }
 
-func (r *AgentRepository) GetAgentByID(id int) (*dao.Agent, error) {
+func (r *AgentRepositoryImpl) GetAgentByID(id int) (*dao.Agent, error) {
 	var agent dao.Agent
 	result := r.db.First(&agent, id)
 	if result.Error != nil {
@@ -31,7 +35,7 @@ func (r *AgentRepository) GetAgentByID(id int) (*dao.Agent, error) {
 	return &agent, nil
 }
 
-func (r *AgentRepository) GetAll() ([]dao.Agent, error) {
+func (r *AgentRepositoryImpl) GetAll() ([]dao.Agent, error) {
 	var agents []dao.Agent
 	result := r.db.Find(&agents)
 	if result.Error != nil {
@@ -40,7 +44,7 @@ func (r *AgentRepository) GetAll() ([]dao.Agent, error) {
 	return agents, nil
 }
 
-func (r *AgentRepository) SetStager(id int, isStager bool) error {
+func (r *AgentRepositoryImpl) SetStager(id int, isStager bool) error {
 	var agent dao.Agent
 	result := r.db.First(&agent, id)
 	if result.Error != nil {
@@ -55,11 +59,15 @@ func (r *AgentRepository) SetStager(id int, isStager bool) error {
 	return r.db.Save(&agent).Error
 }
 
-func (r *AgentRepository) GetStagers() ([]dao.Agent, error) {
+func (r *AgentRepositoryImpl) GetStagers() ([]dao.Agent, error) {
 	var agents []dao.Agent
 	result := r.db.Where("is_stager = ?", true).Find(&agents)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 	return agents, nil
+}
+
+func AgentRepositoryInit(db *gorm.DB) *AgentRepositoryImpl {
+	return &AgentRepositoryImpl{db: db}
 }

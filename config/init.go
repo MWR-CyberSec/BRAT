@@ -7,19 +7,21 @@ import (
 )
 
 type Initialization struct { // <-- Fixed typo here (was Initalization)
-	userRepo repository.UserRepository
-	userSvc  service.UserService
-	UserCtrl controller.UserController
-	AuthCtrl controller.AuthController
+	userRepo  repository.UserRepository
+	userSvc   service.UserService
+	UserCtrl  controller.UserController
+	AuthCtrl  controller.AuthController
+	AgentCtrl controller.AgentController
 }
 
 func NewInitialization(userRepo repository.UserRepository,
 	userSvc service.UserService,
-	userCtrl controller.UserController, authCtrl controller.AuthController) *Initialization { // <-- Fixed return type here
+	userCtrl controller.UserController, authCtrl controller.AuthController, agentCtrl controller.AgentController) *Initialization { // <-- Fixed return type here
 	return &Initialization{ // <-- Fixed type here
-		userRepo: userRepo,
-		userSvc:  userSvc,
-		UserCtrl: userCtrl,
-		AuthCtrl: authCtrl,
+		userRepo:  userRepo,
+		userSvc:   userSvc,
+		UserCtrl:  userCtrl,
+		AuthCtrl:  authCtrl,
+		AgentCtrl: agentCtrl,
 	}
 }
