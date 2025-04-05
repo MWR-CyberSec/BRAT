@@ -7,8 +7,7 @@ BRAT - Browser Remote Access Tool
 
 ### Command/Response
 
-![image](https://github.com/user-attachments/assets/1d75ae01-5962-48eb-8857-77e0b06757a2)
-
+![image](https://github.com/user-attachments/assets/b7b2e3c3-7447-4a28-8c31-25885ee55d0f)
 
 ## Usage
 
