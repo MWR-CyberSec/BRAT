@@ -153,7 +153,7 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 			if ok && messageType == "stager_registration" {
 				println("Agent stager connected: ", message["agentId"].(string))
 
-				agentPayload := agent.GetAgentPayload()
+				agentPayload := agent.GetAgentPayload(message["agentId"].(string))
 
 				var systemInfoStr string
 				if systemInfo, exists := message["systemInfo"]; exists {

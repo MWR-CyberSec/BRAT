@@ -2,6 +2,7 @@ package agent
 
 import (
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -16,7 +17,7 @@ import (
 
 // AgentManagerInterface defines the interface for agent management
 type AgentManagerInterface interface {
-	GetAgentPayload() string
+	GetAgentPayload(agentID string) string
 }
 
 // AgentManagerImpl is the implementation of AgentManagerInterface
@@ -24,19 +25,21 @@ type AgentManagerImpl struct {
 	sync.Mutex
 }
 
-func (am *AgentManagerImpl) GetAgentPayload() string {
+func (am *AgentManagerImpl) GetAgentPayload(agentID string) string {
 	content, err := os.ReadFile("agent/agent.js")
 	if err != nil {
 
 		return `console.log("BARK Agent fallback activated");`
 	}
 
+	strings.ReplaceAll(string(content), "__BARK_AGENT_ID__", agentID)
+
 	return string(content)
 }
 
 // For simpler use, also export a package-level function
-func GetAgentPayload() string {
-	return (&AgentManagerImpl{}).GetAgentPayload()
+func GetAgentPayload(agentID string) string {
+	return (&AgentManagerImpl{}).GetAgentPayload(agentID)
 }
 
 // Create a singleton instance for global use
