@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (token) {
         showDashboard();
         fetchUserProfile(token);
+        fetchAgentStats();
     }
 
     // Toggle between login and register forms
@@ -35,6 +36,19 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('login-panel').style.transform = 'translateX(0)';
             document.getElementById('login-panel').style.pointerEvents = 'auto';
         }, 300);
+    });
+
+    document.getElementById('refresh-stats')?.addEventListener('click', function() {
+        fetchAgentStats();
+    });
+
+    document.getElementById('view-agents-btn')?.addEventListener('click', function() {
+        console.log("View agents button clicked"); // Debug
+        const agentsPanel = document.getElementById('agents-panel');
+        
+        if (agentsPanel && dashboard) {
+            agentsPanel.style.display = 'block';
+        }
     });
 
     const loginForm = document.getElementById('login-form');
@@ -136,6 +150,85 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Helper functions
+
+function fetchAgentStats() {
+    const refreshButton = document.getElementById('refresh-stats');
+    
+    if (refreshButton) {
+        // Show loading state
+        refreshButton.disabled = true;
+        refreshButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Loading...</span>';
+    }
+    
+    fetch('/agents')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch agent stats');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Agent stats data:", data);
+            
+            // Get the count of agents
+            const clientsCount = data.length || 0;
+            
+            // Count active sessions (non-stagers)
+            const sessionsCount = data.filter(agent => !agent.IsStager).length || 0;
+            
+            // Update UI elements
+            updateStatsUI(sessionsCount, clientsCount);
+        })
+        .catch(error => {
+            console.error('Error fetching agent stats:', error);
+            
+            // Update network status to show error
+            const networkStatus = document.getElementById('network-status');
+            if (networkStatus) {
+                networkStatus.textContent = 'ERROR';
+                networkStatus.className = 'cyber-status offline';
+            }
+        })
+        .finally(() => {
+            // Reset button state
+            if (refreshButton) {
+                refreshButton.disabled = false;
+                refreshButton.innerHTML = '<i class="fas fa-sync"></i> <span>Refresh</span>';
+            }
+        });
+}
+
+function updateStatsUI(sessions, clients) {
+    // Update sessions stat
+    const sessionsCount = document.getElementById('sessions-count');
+    const sessionsBar = document.getElementById('sessions-bar');
+    if (sessionsCount) sessionsCount.textContent = sessions;
+    if (sessionsBar) {
+        // Calculate percentage (capped at 100%)
+        const sessionPercentage = Math.min(sessions * 10, 100);
+        sessionsBar.style.setProperty('--fill-level', `${sessionPercentage}%`);
+    }
+    
+    // Update clients stat
+    const clientsCount = document.getElementById('clients-count');
+    const clientsBar = document.getElementById('clients-bar');
+    if (clientsCount) clientsCount.textContent = clients;
+    if (clientsBar) {
+        // Calculate percentage (capped at 100%)
+        const clientPercentage = Math.min(clients * 10, 100);
+        clientsBar.style.setProperty('--fill-level', `${clientPercentage}%`);
+    }
+    
+    // Update network status
+    const networkStatus = document.getElementById('network-status');
+    if (networkStatus) {
+        networkStatus.textContent = 'ONLINE';
+        networkStatus.className = 'cyber-status online';
+    }
+    
+    console.log("Stats UI updated:", { sessions, clients });
+}
+
 function showDashboard() {
     const authPanels = document.getElementById('auth-panels');
     const dashboard = document.getElementById('dashboard');
