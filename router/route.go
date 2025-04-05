@@ -117,6 +117,7 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 	agentRoute.GET("", init.AgentCtrl.GetAgents)
 	agentRoute.GET("/:agentID", init.AgentCtrl.GetAgentByID)
 	agentRoute.GET("/stagers", init.AgentCtrl.GetStagers)
+	agentRoute.POST("/clear", init.AgentCtrl.ClearAgents)
 
 	/*
 	* WEBSOCKET routes

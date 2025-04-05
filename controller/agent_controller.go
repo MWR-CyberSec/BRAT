@@ -12,10 +12,15 @@ type AgentController interface {
 	GetAgentByID(*gin.Context)
 	GetStagers(*gin.Context)
 	SetStager(*gin.Context)
+	ClearAgents(*gin.Context)
 }
 
 type AgentControllerImpl struct {
 	agentService service.AgentService
+}
+
+func (u *AgentControllerImpl) ClearAgents(c *gin.Context) {
+	u.agentService.ClearAgents(c)
 }
 
 func (u *AgentControllerImpl) GetAgents(c *gin.Context) {

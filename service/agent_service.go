@@ -16,6 +16,7 @@ type AgentService interface {
 	GetAgentByID(*gin.Context)
 	GetStagers(*gin.Context)
 	SetStager(*gin.Context)
+	ClearAgents(*gin.Context)
 }
 
 type AgentServiceImpl struct {
@@ -30,6 +31,24 @@ func (s *AgentServiceImpl) GetAgents(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, agents)
+}
+
+func (s *AgentServiceImpl) ClearAgents(c *gin.Context) {
+	// Clear all agents from the database
+
+	_, exists := c.Get("userRole")
+	if !exists {
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		return
+	}
+
+	err := s.agentsRepository.ClearAgents()
+	if err != nil {
+		log.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to clear agents"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "agents cleared"})
 }
 
 func (s *AgentServiceImpl) CreateAgent(c *dao.Agent) {

@@ -13,6 +13,7 @@ type AgentRepository interface {
 	GetAll() ([]dao.Agent, error)
 	SetStager(id int, isStager bool) error
 	GetStagers() ([]dao.Agent, error)
+	ClearAgents() error
 }
 
 type AgentRepositoryImpl struct {
@@ -21,6 +22,21 @@ type AgentRepositoryImpl struct {
 
 func (r *AgentRepositoryImpl) CreateAgent(agent *dao.Agent) error {
 	return r.db.Create(agent).Error
+}
+
+func (r *AgentRepositoryImpl) ClearAgents() error {
+	var agents []dao.Agent
+	result := r.db.Find(&agents)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	for _, agent := range agents {
+		if err := r.db.Delete(&agent).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *AgentRepositoryImpl) GetAgentByID(id int) (*dao.Agent, error) {
