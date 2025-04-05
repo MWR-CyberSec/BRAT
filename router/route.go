@@ -8,6 +8,7 @@ import (
 
 	"github.com/Et43/BARK/agent"
 	"github.com/Et43/BARK/config"
+	"github.com/Et43/BARK/database/dao"
 	"github.com/Et43/BARK/middleware"
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
@@ -109,6 +110,16 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 	})
 
 	/*
+	* AGENT routes
+	*
+	 */
+	agentRoute := router.Group("/agents")
+	agentRoute.GET("", init.AgentCtrl.GetAgents)
+	agentRoute.GET("/:agentID", init.AgentCtrl.GetAgentByID)
+	agentRoute.GET("/stagers", init.AgentCtrl.GetStagers)
+	agentRoute.GET("/clear", init.AgentCtrl.ClearAgents)
+
+	/*
 	* WEBSOCKET routes
 	*
 	* /ws GET - Websocket route
@@ -126,7 +137,7 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 		for {
 			_, msg, err := conn.ReadMessage()
 			if err != nil {
-				println("Error reading message: %v", err)
+				println("Error reading message: ", err.Error())
 				return
 			}
 
@@ -139,11 +150,36 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 
 			// Check if it's a stager registration
 			messageType, ok := message["type"].(string)
-			println("Message recieved: %v", message)
 			if ok && messageType == "stager_registration" {
-				println("Agent stager connected: %v", message["agentId"])
+				println("Agent stager connected: ", message["agentId"].(string))
 
 				agentPayload := agent.GetAgentPayload()
+
+				var systemInfoStr string
+				if systemInfo, exists := message["systemInfo"]; exists {
+					// Convert systemInfo to JSON string for storage
+					systemInfoBytes, err := json.Marshal(systemInfo)
+					if err == nil {
+						systemInfoStr = string(systemInfoBytes)
+					} else {
+						println("Error marshaling systemInfo:", err.Error())
+					}
+				} else {
+					println("No systemInfo found in the message")
+				}
+
+				newAgent := &dao.Agent{
+					Name:       message["agentId"].(string),
+					SourceIP:   c.ClientIP(),
+					IsStager:   true,
+					SystemInfo: systemInfoStr,
+				}
+
+				init.AgentCtrl.CreateAgent(newAgent)
+
+				// If CreateAgent has internal error handling, no need to check for err here
+				println("Agent created successfully")
+
 				// Send back the agent payload
 				payload := map[string]interface{}{
 					"type":      "agent_payload",
@@ -153,20 +189,20 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 
 				payloadJson, _ := json.Marshal(payload)
 				if err := conn.WriteMessage(websocket.TextMessage, payloadJson); err != nil {
-					println("Error sending payload: %v", err)
+					println("Error sending payload: ", err.Error())
 					return
 				}
 
-				println("Payload sent to agent: %v", message["agentId"])
+				println("Main agent payload sent to stager: ", message["agentId"].(string))
 			} else if ok && messageType == "payload_received" {
-				println("Agent confirmed payload receipt: %v", message)
+				println("Agent confirmed payload receipt: ", message["type"].(string), message["status"].(string))
 			} else {
 				// Handle other message types
 				println("Received message: %v", message)
 
 				// Echo the message back
 				if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
-					println("Error echoing message: %v", err)
+					println("Error echoing message: ", err.Error())
 					return
 				}
 			}

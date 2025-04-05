@@ -645,3 +645,28 @@
     width: var(--fill-level, 50%);
     background: linear-gradient(90deg, var(--cyberpunk-secondary), var(--cyberpunk-primary));
   }
+
+  .agent-stager {
+    background-color: rgba(243, 230, 0, 0.05);
+  }
+  
+  .modal-content h3 {
+    color: var(--cyberpunk-primary);
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  /* Make sure the modal displays properly */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.8);
+  }

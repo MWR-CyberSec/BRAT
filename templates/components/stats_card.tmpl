@@ -1,18 +1,24 @@
 {{ define "stats_card" }}
-<div class="card">
-    <h3>System Stats</h3>
+<div class="card" id="stats-card">
+    <div class="card-header">
+        <h3>System Stats</h3>
+        <button id="refresh-stats" class="cyber-button">
+            <i class="fas fa-sync"></i>
+            <span>Refresh</span>
+        </button>
+    </div>
     <div class="card-content">
-        <div class="cyber-status-line">NETWORK: <span class="cyber-status online">ONLINE</span></div>
+        <div class="cyber-status-line">NETWORK: <span class="cyber-status online" id="network-status">ONLINE</span></div>
         <div class="stats">
             <div class="stat-item">
-                <div class="stat-value">{{ .stats.sessions }}</div>
+                <div class="stat-value" id="sessions-count">0</div>
                 <div class="stat-label">Active Sessions</div>
-                <div class="stat-bar" style="--fill-level: {{ .stats.sessions }}%;"></div>
+                <div class="stat-bar" id="sessions-bar" style="--fill-level: 0%;"></div>
             </div>
             <div class="stat-item">
-                <div class="stat-value">{{ .stats.clients }}</div>
+                <div class="stat-value" id="clients-count">0</div>
                 <div class="stat-label">Connected Clients</div>
-                <div class="stat-bar" style="--fill-level: {{ .stats.clients }}%;"></div>
+                <div class="stat-bar" id="clients-bar" style="--fill-level: 0%;"></div>
             </div>
         </div>
     </div>
