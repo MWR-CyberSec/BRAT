@@ -11,7 +11,7 @@ type AgentRepository interface {
 	CreateAgent(agent *dao.Agent) error
 	GetAgentByID(id int) (*dao.Agent, error)
 	GetAll() ([]dao.Agent, error)
-	SetStager(id int, isStager bool) error
+	SetStager(name string, isStager bool) error
 	GetStagers() ([]dao.Agent, error)
 	ClearAgents() error
 }
@@ -60,9 +60,9 @@ func (r *AgentRepositoryImpl) GetAll() ([]dao.Agent, error) {
 	return agents, nil
 }
 
-func (r *AgentRepositoryImpl) SetStager(id int, isStager bool) error {
+func (r *AgentRepositoryImpl) SetStager(name string, isStager bool) error {
 	var agent dao.Agent
-	result := r.db.First(&agent, id)
+	result := r.db.Where("name = ?", name).First(&agent)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil // Agent not found

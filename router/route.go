@@ -196,6 +196,11 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 				println("Main agent payload sent to stager: ", message["agentId"].(string))
 			} else if ok && messageType == "payload_received" {
 				println("Agent confirmed payload receipt: ", message["type"].(string), message["status"].(string))
+			} else if ok && messageType == "agent_activation" {
+				// BIG NOTE HERE
+				// We are swapping agentID and Name so where agentID is mentioned treat it like name
+				println("Agent activated: ", message["agentId"].(string))
+				init.AgentCtrl.SetStager(message["agentId"].(string), false)
 			} else {
 				// Handle other message types
 				println("Received message: %v", message)

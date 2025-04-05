@@ -32,9 +32,11 @@ func (am *AgentManagerImpl) GetAgentPayload(agentID string) string {
 		return `console.log("BARK Agent fallback activated");`
 	}
 
-	strings.ReplaceAll(string(content), "__BARK_AGENT_ID__", agentID)
+	stringContent := string(content)
 
-	return string(content)
+	stringContent = strings.ReplaceAll(string(stringContent), "__BARK_AGENT_ID__", agentID)
+
+	return string(stringContent)
 }
 
 // For simpler use, also export a package-level function

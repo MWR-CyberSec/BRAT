@@ -11,7 +11,7 @@ type AgentController interface {
 	CreateAgent(*dao.Agent)
 	GetAgentByID(*gin.Context)
 	GetStagers(*gin.Context)
-	SetStager(*gin.Context)
+	SetStager(name string, isStager bool) error
 	ClearAgents(*gin.Context)
 }
 
@@ -39,8 +39,9 @@ func (u *AgentControllerImpl) GetStagers(c *gin.Context) {
 	u.agentService.GetStagers(c)
 }
 
-func (u *AgentControllerImpl) SetStager(c *gin.Context) {
-	u.agentService.SetStager(c)
+func (u *AgentControllerImpl) SetStager(name string, isStager bool) error {
+	u.agentService.SetStager(name, isStager)
+	return nil
 }
 
 // Remove NewAgentController to avoid the double binding issue
