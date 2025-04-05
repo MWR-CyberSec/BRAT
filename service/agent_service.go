@@ -15,7 +15,7 @@ type AgentService interface {
 	CreateAgent(*dao.Agent)
 	GetAgentByID(*gin.Context)
 	GetStagers(*gin.Context)
-	SetStager(*gin.Context)
+	SetStager(name string, isStager bool) error
 	ClearAgents(*gin.Context)
 }
 
@@ -89,32 +89,11 @@ func (s *AgentServiceImpl) GetStagers(c *gin.Context) {
 }
 
 // Add the missing SetStager implementation
-func (s *AgentServiceImpl) SetStager(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("agentID"))
-	if err != nil {
-		log.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid agent ID"})
-		return
-	}
+func (s *AgentServiceImpl) SetStager(name string, isStager bool) error {
 
-	var request struct {
-		IsStager bool `json:"is_stager"`
-	}
+	_ = s.agentsRepository.SetStager(name, isStager)
 
-	if err := c.ShouldBindJSON(&request); err != nil {
-		log.Error(err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
-		return
-	}
-
-	err = s.agentsRepository.SetStager(id, request.IsStager)
-	if err != nil {
-		log.Error(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update stager status"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "stager status updated"})
+	return nil
 }
 
 func AgentServiceInit(agentsRepository repository.AgentRepository) *AgentServiceImpl {

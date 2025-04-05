@@ -1,6 +1,10 @@
 package agent
 
-import "sync"
+import (
+	"os"
+	"strings"
+	"sync"
+)
 
 /*
 *
@@ -13,7 +17,7 @@ import "sync"
 
 // AgentManagerInterface defines the interface for agent management
 type AgentManagerInterface interface {
-	GetAgentPayload() string
+	GetAgentPayload(agentID string) string
 }
 
 // AgentManagerImpl is the implementation of AgentManagerInterface
@@ -21,41 +25,23 @@ type AgentManagerImpl struct {
 	sync.Mutex
 }
 
-// GetAgentPayload returns the JavaScript payload for agents
-func (am *AgentManagerImpl) GetAgentPayload() string {
-	return `
-    (function() {
-        console.log("BARK Agent activated");
-        
-        // Your agent implementation here
-        const agent = {
-            version: "1.0.0",
-            init: function() {
-                console.log("Agent initializing...");
-                this.startHeartbeat();
-                this.collectData();
-            },
-            startHeartbeat: function() {
-                setInterval(() => {
-                    console.log("Agent heartbeat");
-                    // Send heartbeat to C2 server
-                }, 60000);
-            },
-            collectData: function() {
-                console.log("Collecting system data");
-                // Implement data collection
-            }
-        };
-        
-        // Initialize the agent
-        agent.init();
-    })();
-    `
+func (am *AgentManagerImpl) GetAgentPayload(agentID string) string {
+	content, err := os.ReadFile("agent/agent.js")
+	if err != nil {
+
+		return `console.log("BARK Agent fallback activated");`
+	}
+
+	stringContent := string(content)
+
+	stringContent = strings.ReplaceAll(string(stringContent), "__BARK_AGENT_ID__", agentID)
+
+	return string(stringContent)
 }
 
 // For simpler use, also export a package-level function
-func GetAgentPayload() string {
-	return (&AgentManagerImpl{}).GetAgentPayload()
+func GetAgentPayload(agentID string) string {
+	return (&AgentManagerImpl{}).GetAgentPayload(agentID)
 }
 
 // Create a singleton instance for global use
