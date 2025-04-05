@@ -37,6 +37,8 @@ func (s *AgentServiceImpl) ClearAgents(c *gin.Context) {
 	// Clear all agents from the database
 
 	_, exists := c.Get("userRole")
+	println(exists)
+	println(c.Get("userRole"))
 	if !exists {
 		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 		return

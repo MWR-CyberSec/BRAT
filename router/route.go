@@ -154,12 +154,25 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 				println("Agent stager connected: ", message["agentId"].(string))
 
 				agentPayload := agent.GetAgentPayload()
-				//systemInfo, _ := json.Marshal(message["systemInfo"])
+
+				var systemInfoStr string
+				if systemInfo, exists := message["systemInfo"]; exists {
+					// Convert systemInfo to JSON string for storage
+					systemInfoBytes, err := json.Marshal(systemInfo)
+					if err == nil {
+						systemInfoStr = string(systemInfoBytes)
+					} else {
+						println("Error marshaling systemInfo:", err.Error())
+					}
+				} else {
+					println("No systemInfo found in the message")
+				}
 
 				newAgent := &dao.Agent{
-					Name:     message["agentId"].(string),
-					SourceIP: c.ClientIP(),
-					IsStager: true,
+					Name:       message["agentId"].(string),
+					SourceIP:   c.ClientIP(),
+					IsStager:   true,
+					SystemInfo: systemInfoStr,
 				}
 
 				init.AgentCtrl.CreateAgent(newAgent)

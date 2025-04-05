@@ -16,6 +16,7 @@ CREATE TABLE agents (
     name VARCHAR(255) NOT NULL,
     is_stager BOOLEAN NOT NULL,
     source VARCHAR(255),
+    system_info TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP
