@@ -32,4 +32,4 @@ rebuild-docker:
 
 build-db:
 	docker compose down
-	docker compose up -d db
+	docker compose up -d db redis

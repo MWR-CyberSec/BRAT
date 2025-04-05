@@ -1,4 +1,3 @@
-# Use postgres/example user/password credentials
 version: '3.9'
 
 services:
@@ -20,6 +19,19 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # Build and run the go application
   app:
     build:
@@ -34,7 +46,13 @@ services:
       - LOG_LEVEL=DEBUG
       - JWT_SECRET=secret
       - DEBUG=true
+      - REDIS_URL=redis://redis:6379
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: always
+
+volumes:
+  redis_data:
