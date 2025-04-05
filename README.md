@@ -1,5 +1,14 @@
-# BARK
-BARK - Browser Access Remote Kontrol
+# BRAT
+BRAT - Browser Remote Access Tool
+
+### Overall Communication
+
+![image](https://github.com/user-attachments/assets/100515cd-2efb-4d2a-a130-4c9a56943db7)
+
+### Command/Response
+
+![image](https://github.com/user-attachments/assets/1d75ae01-5962-48eb-8857-77e0b06757a2)
+
 
 ## Usage
 
