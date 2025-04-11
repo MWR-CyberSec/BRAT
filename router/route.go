@@ -109,9 +109,11 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 		})
 	})
 
+	router.GET("/dashboard/:agentID", init.DashboardCtrl.ShowDashboard)
+
 	/*
 	* AGENT routes
-	*
+	*HTML()
 	 */
 	agentRoute := router.Group("/agents")
 	agentRoute.GET("", init.AgentCtrl.GetAgents)

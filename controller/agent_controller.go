@@ -10,6 +10,7 @@ type AgentController interface {
 	GetAgents(*gin.Context)
 	CreateAgent(*dao.Agent)
 	GetAgentByID(*gin.Context)
+	GetAgentByIDInternal(id int)
 	GetStagers(*gin.Context)
 	SetStager(name string, isStager bool) error
 	ClearAgents(*gin.Context)
@@ -33,6 +34,10 @@ func (u *AgentControllerImpl) CreateAgent(agent *dao.Agent) {
 
 func (u *AgentControllerImpl) GetAgentByID(c *gin.Context) {
 	u.agentService.GetAgentByID(c)
+}
+
+func (u *AgentControllerImpl) GetAgentByIDInternal(id int) {
+	u.agentService.GetAgentByIDInternal(id)
 }
 
 func (u *AgentControllerImpl) GetStagers(c *gin.Context) {

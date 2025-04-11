@@ -1,0 +1,319 @@
+/* Dashboard specific styles */
+.container-fluid {
+    max-width: 100%;
+    padding: 15px;
+    margin: 0;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: var(--cyberpunk-panel);
+    border-bottom: 2px solid var(--cyberpunk-accent);
+    margin-bottom: 20px;
+    border-radius: 5px;
+}
+
+.dashboard-header .logo h2 {
+    margin: 0;
+    font-size: 1.8rem;
+    letter-spacing: 0.1em;
+    color: var(--cyberpunk-primary);
+}
+
+.agent-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.agent-id {
+    font-family: monospace;
+    font-size: 1.2rem;
+    color: var(--cyberpunk-secondary);
+    margin: 5px 0;
+    letter-spacing: 1px;
+}
+
+.last-seen {
+    font-size: 0.8rem;
+    color: var(--cyberpunk-text);
+    opacity: 0.7;
+}
+
+.nav-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-small {
+    padding: 8px 15px;
+    font-size: 0.9rem;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    grid-template-rows: auto 1fr;
+    gap: 20px;
+    height: calc(100vh - 100px);
+}
+
+.panel {
+    background-color: var(--cyberpunk-panel);
+    border-radius: 5px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-left: 3px solid var(--cyberpunk-accent);
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(5, 217, 232, 0.3);
+}
+
+.panel-header h3 {
+    margin: 0;
+    color: var(--cyberpunk-primary);
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.panel-content {
+    padding: 15px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Agent Details Panel */
+.agent-details {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+}
+
+.detail-item {
+    display: flex;
+    margin-bottom: 12px;
+    font-family: monospace;
+}
+
+.detail-label {
+    width: 100px;
+    color: var(--cyberpunk-secondary);
+    font-weight: bold;
+}
+
+.detail-value {
+    color: var(--cyberpunk-text);
+}
+
+.system-info {
+    margin-top: 20px;
+}
+
+.system-info h4 {
+    color: var(--cyberpunk-primary);
+    margin-bottom: 10px;
+    font-size: 1rem;
+    text-transform: uppercase;
+}
+
+.system-info-item {
+    display: flex;
+    margin-bottom: 8px;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.system-info-label {
+    width: 130px;
+    color: var(--cyberpunk-secondary);
+}
+
+/* Command Console Panel */
+.command-console {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.console-output {
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    border-radius: 3px;
+    font-family: monospace;
+    height: 300px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.console-line {
+    padding: 3px 0;
+    display: flex;
+    align-items: flex-start;
+}
+
+.timestamp {
+    color: var(--cyberpunk-primary);
+    margin-right: 10px;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    width: 80px;
+}
+
+.message-content {
+    color: var(--cyberpunk-text);
+    word-break: break-word;
+    flex: 1;
+}
+
+.system-message .message-content {
+    color: var(--cyberpunk-secondary);
+    font-style: italic;
+}
+
+.command-line .message-content {
+    color: var(--cyberpunk-primary);
+}
+
+.error-line .message-content {
+    color: var(--cyberpunk-accent);
+}
+
+.console-input-container {
+    display: flex;
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    border-radius: 3px;
+    align-items: center;
+}
+
+.console-prompt {
+    color: var(--cyberpunk-primary);
+    margin-right: 10px;
+    font-family: monospace;
+    font-weight: bold;
+}
+
+.console-input {
+    background: transparent;
+    border: none;
+    color: var(--cyberpunk-text);
+    font-family: monospace;
+    width: 100%;
+    outline: none;
+}
+
+/* Command Library Panel */
+.command-library {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.command-category {
+    margin-bottom: 20px;
+}
+
+.category-header {
+    color: var(--cyberpunk-secondary);
+    text-transform: uppercase;
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(5, 217, 232, 0.3);
+    padding-bottom: 5px;
+}
+
+.command-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.command-item {
+    padding: 8px 12px;
+    background-color: rgba(0, 0, 0, 0.2);
+    color: var(--cyberpunk-text);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    border-left: 2px solid transparent;
+}
+
+.command-item:hover {
+    background-color: rgba(0, 255, 210, 0.1);
+    border-left-color: var(--cyberpunk-secondary);
+    color: var(--cyberpunk-secondary);
+}
+
+/* Activity Log Panel */
+.activity-log {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.activity-type {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.activity-type.command {
+    background-color: rgba(0, 255, 210, 0.1);
+    color: var(--cyberpunk-secondary);
+}
+
+.activity-type.response {
+    background-color: rgba(243, 230, 0, 0.1);
+    color: var(--cyberpunk-primary);
+}
+
+.activity-type.connection {
+    background-color: rgba(0, 255, 0, 0.1);
+    color: #00ff00;
+}
+
+.activity-type.error {
+    background-color: rgba(255, 42, 109, 0.1);
+    color: var(--cyberpunk-accent);
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
+    }
+    
+    .agent-details, .command-console, .command-library, .activity-log {
+        grid-column: 1;
+    }
+    
+    .agent-details {
+        grid-row: 1;
+    }
+    
+    .command-console {
+        grid-row: 2;
+    }
+    
+    .command-library {
+        grid-row: 3;
+    }
+    
+    .activity-log {
+        grid-row: 4;
+    }
+}

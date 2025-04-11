@@ -25,7 +25,9 @@ func Init() *Initialization {
 	agentRepositoryImpl := repository.AgentRepositoryInit(gormDB)
 	agentServiceImpl := service.AgentServiceInit(agentRepositoryImpl)
 	agentControllerImpl := controller.AgentControllerInit(agentServiceImpl)
-	initialization := NewInitialization(userRepositoryImpl, userServiceImpl, userControllerImpl, authControllerImpl, agentControllerImpl)
+	dashboardServiceImpl := service.DashboardServiceInit(agentServiceImpl)
+	dashboardControllerImpl := controller.DashboardControllerInit(dashboardServiceImpl)
+	initialization := NewInitialization(userRepositoryImpl, userServiceImpl, userControllerImpl, authControllerImpl, agentControllerImpl, dashboardServiceImpl, dashboardControllerImpl)
 	return initialization
 }
 
@@ -39,7 +41,6 @@ var userRepoSet = wire.NewSet(repository.UserRepositoryInit, wire.Bind(new(repos
 
 var userCtrlSet = wire.NewSet(controller.UserControllerInit, wire.Bind(new(controller.UserController), new(*controller.UserControllerImpl)))
 
-// Add the missing AuthService provider
 var authServiceSet = wire.NewSet(service.AuthServiceInit, wire.Bind(new(service.AuthService), new(*service.AuthServiceImpl)))
 
 var authCtrlSet = wire.NewSet(controller.AuthControllerInit, wire.Bind(new(controller.AuthController), new(*controller.AuthControllerImpl)))
@@ -49,3 +50,8 @@ var agentRepoSet = wire.NewSet(repository.AgentRepositoryInit, wire.Bind(new(rep
 var agentServiceSet = wire.NewSet(service.AgentServiceInit, wire.Bind(new(service.AgentService), new(*service.AgentServiceImpl)))
 
 var agentCtrlSet = wire.NewSet(controller.AgentControllerInit, wire.Bind(new(controller.AgentController), new(*controller.AgentControllerImpl)))
+
+// Make sure dashboardServiceSet uses agentService
+var dashboardServiceSet = wire.NewSet(service.DashboardServiceInit, wire.Bind(new(service.DashboardService), new(*service.DashboardServiceImpl)))
+
+var dashboardCtrlSet = wire.NewSet(controller.DashboardControllerInit, wire.Bind(new(controller.DashboardController), new(*controller.DashboardControllerImpl)))
