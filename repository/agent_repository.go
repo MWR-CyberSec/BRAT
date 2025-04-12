@@ -14,10 +14,20 @@ type AgentRepository interface {
 	SetStager(name string, isStager bool) error
 	GetStagers() ([]dao.Agent, error)
 	ClearAgents() error
+	GetAgentByName(name string) (*dao.Agent, error)
 }
 
 type AgentRepositoryImpl struct {
 	db *gorm.DB
+}
+
+func (r *AgentRepositoryImpl) GetAgentByName(name string) (*dao.Agent, error) {
+	var agent dao.Agent
+	result := r.db.Where("name = ?", name).First(&agent)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &agent, nil
 }
 
 func (r *AgentRepositoryImpl) CreateAgent(agent *dao.Agent) error {

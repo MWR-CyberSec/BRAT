@@ -24,6 +24,11 @@ func main() {
 		host = "0.0.0.0"
 	}
 
+	// Initialize Redis
+	config.InitRedis()
+
+	// MAIN APP
+
 	init := config.Init()
 	app := router.InitRouter(init)
 

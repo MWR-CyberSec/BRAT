@@ -10,13 +10,19 @@ type AgentController interface {
 	GetAgents(*gin.Context)
 	CreateAgent(*dao.Agent)
 	GetAgentByID(*gin.Context)
+	GetAgentByIDInternal(id int)
 	GetStagers(*gin.Context)
 	SetStager(name string, isStager bool) error
 	ClearAgents(*gin.Context)
+	GetAgentByName(name string) (*dao.Agent, error)
 }
 
 type AgentControllerImpl struct {
 	agentService service.AgentService
+}
+
+func (ctrl *AgentControllerImpl) GetAgentByName(name string) (*dao.Agent, error) {
+	return ctrl.agentService.GetAgentByName(name)
 }
 
 func (u *AgentControllerImpl) ClearAgents(c *gin.Context) {
@@ -33,6 +39,10 @@ func (u *AgentControllerImpl) CreateAgent(agent *dao.Agent) {
 
 func (u *AgentControllerImpl) GetAgentByID(c *gin.Context) {
 	u.agentService.GetAgentByID(c)
+}
+
+func (u *AgentControllerImpl) GetAgentByIDInternal(id int) {
+	u.agentService.GetAgentByIDInternal(id)
 }
 
 func (u *AgentControllerImpl) GetStagers(c *gin.Context) {

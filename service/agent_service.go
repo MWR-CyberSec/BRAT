@@ -14,9 +14,11 @@ type AgentService interface {
 	GetAgents(*gin.Context)
 	CreateAgent(*dao.Agent)
 	GetAgentByID(*gin.Context)
+	GetAgentByIDInternal(id int) (*dao.Agent, error)
 	GetStagers(*gin.Context)
 	SetStager(name string, isStager bool) error
 	ClearAgents(*gin.Context)
+	GetAgentByName(name string) (*dao.Agent, error)
 }
 
 type AgentServiceImpl struct {
@@ -31,6 +33,10 @@ func (s *AgentServiceImpl) GetAgents(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, agents)
+}
+
+func (s *AgentServiceImpl) GetAgentByName(name string) (*dao.Agent, error) {
+	return s.agentsRepository.GetAgentByName(name)
 }
 
 func (s *AgentServiceImpl) ClearAgents(c *gin.Context) {
@@ -86,6 +92,19 @@ func (s *AgentServiceImpl) GetStagers(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, stagers)
+}
+
+func (s *AgentServiceImpl) GetAgentByIDInternal(id int) (*dao.Agent, error) {
+	agent, err := s.agentsRepository.GetAgentByID(id)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	if agent == nil {
+		log.Error("agent not found")
+		return nil, nil
+	}
+	return agent, nil
 }
 
 // Add the missing SetStager implementation

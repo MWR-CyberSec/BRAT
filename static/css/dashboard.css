@@ -1,0 +1,431 @@
+/* Dashboard specific styles */
+.container-fluid {
+    max-width: 100%;
+    padding: 15px;
+    margin: 0;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: var(--cyberpunk-panel);
+    border-bottom: 2px solid var(--cyberpunk-accent);
+    margin-bottom: 20px;
+    border-radius: 5px;
+}
+
+.dashboard-header .logo h2 {
+    margin: 0;
+    font-size: 1.8rem;
+    letter-spacing: 0.1em;
+    color: var(--cyberpunk-primary);
+}
+
+.agent-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.agent-id {
+    font-family: monospace;
+    font-size: 1.2rem;
+    color: var(--cyberpunk-secondary);
+    margin: 5px 0;
+    letter-spacing: 1px;
+}
+
+.last-seen {
+    font-size: 0.8rem;
+    color: var(--cyberpunk-text);
+    opacity: 0.7;
+}
+
+.nav-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-small {
+    padding: 8px 15px;
+    font-size: 0.9rem;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    grid-template-rows: minmax(400px, 1fr) minmax(400px, 1fr);
+    gap: 20px;
+    height: calc(100vh - 100px);
+    min-height: 800px;
+}
+
+.panel {
+    background-color: var(--cyberpunk-panel);
+    border-radius: 5px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-left: 3px solid var(--cyberpunk-accent);
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(5, 217, 232, 0.3);
+}
+
+.panel-header h3 {
+    margin: 0;
+    color: var(--cyberpunk-primary);
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.panel-content {
+    padding: 15px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    /* Ensure content is properly contained */
+    min-height: 0;
+}
+
+/* Agent Details Panel */
+.agent-details {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    display: flex;
+    flex-direction: column;
+    /* Ensure proper containment with hidden overflow */
+    overflow: hidden;
+}
+
+.detail-item {
+    display: flex;
+    margin-bottom: 12px;
+    font-family: monospace;
+}
+
+.detail-label {
+    width: 100px;
+    color: var(--cyberpunk-secondary);
+    font-weight: bold;
+}
+
+.detail-value {
+    color: var(--cyberpunk-text);
+}
+
+/* Fix for system info overflowing */
+.system-info {
+    overflow-y: auto;
+    margin-top: 15px;
+    max-height: 400px; /* Set a fixed max height */
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid rgba(5, 217, 232, 0.3);
+    padding-top: 15px;
+    /* Make sure it doesn't grow beyond its container */
+    flex: 0 1 auto;
+}
+
+.system-info h4 {
+    color: var(--cyberpunk-primary);
+    margin-bottom: 10px;
+    font-size: 1rem;
+    text-transform: uppercase;
+}
+
+.system-info-item {
+    display: flex;
+    margin-bottom: 8px;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.system-info-label {
+    width: 130px;
+    color: var(--cyberpunk-secondary);
+}
+
+/* Command Console Panel */
+.command-console {
+    grid-column: 2;
+    grid-row: 1 / span 2; /* Expanded to cover both rows */
+    display: flex;
+    flex-direction: column;
+}
+
+.console-output {
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    border-radius: 3px;
+    font-family: monospace;
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    min-height: 200px;
+    max-height: calc(70vh - 100px);
+}
+
+.console-line {
+    padding: 3px 0;
+    display: flex;
+    align-items: flex-start;
+    min-height: fit-content;
+    width: 100%;
+}
+
+.timestamp {
+    color: var(--cyberpunk-primary);
+    margin-right: 10px;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    width: 80px;
+    flex-shrink: 0;
+}
+
+.message-content {
+    color: var(--cyberpunk-text);
+    word-break: break-word;
+    flex: 1;
+    white-space: pre-wrap;
+}
+
+.message-content pre {
+    margin: 0;
+    font-family: monospace;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    border-radius: 3px;
+    border-left: 2px solid var(--cyberpunk-secondary);
+    overflow-x: auto;
+}
+
+.system-message .message-content {
+    color: var(--cyberpunk-secondary);
+    font-style: italic;
+}
+
+.command-line .message-content {
+    color: var(--cyberpunk-primary);
+    font-weight: bold;
+}
+
+.error-line .message-content {
+    color: var(--cyberpunk-accent);
+}
+
+.console-input-container {
+    display: flex;
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    border-radius: 3px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.console-prompt {
+    color: var(--cyberpunk-primary);
+    margin-right: 10px;
+    font-family: monospace;
+    font-weight: bold;
+}
+
+.console-input {
+    background: transparent;
+    border: none;
+    color: var(--cyberpunk-text);
+    font-family: monospace;
+    width: 100%;
+    outline: none;
+}
+
+/* Command Library Panel */
+.command-library {
+    grid-column: 1;
+    grid-row: 2;
+    overflow: auto;
+}
+
+.command-category {
+    margin-bottom: 20px;
+}
+
+.category-header {
+    color: var(--cyberpunk-secondary);
+    text-transform: uppercase;
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(5, 217, 232, 0.3);
+    padding-bottom: 5px;
+}
+
+.command-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.command-item {
+    padding: 8px 12px;
+    background-color: rgba(0, 0, 0, 0.2);
+    color: var(--cyberpunk-text);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    border-left: 2px solid transparent;
+}
+
+.command-item:hover {
+    background-color: rgba(0, 255, 210, 0.1);
+    border-left-color: var(--cyberpunk-secondary);
+    color: var(--cyberpunk-secondary);
+}
+
+/* Pending Commands Panel - Now integrated into Command Console */
+.command-queue {
+    margin-top: 0;
+    margin-bottom: 15px;
+    background-color: transparent;
+    box-shadow: none;
+    border-left: none;
+}
+
+.command-queue .panel-header {
+    padding: 8px 0;
+    background-color: transparent;
+    border-bottom: 1px solid rgba(5, 217, 232, 0.3);
+}
+
+.command-queue .panel-content {
+    padding: 10px 0;
+}
+
+/* Activity Log Panel - Now merged into Command Console */
+.activity-log {
+    display: none; /* Hide the activity log panel */
+}
+
+/* Command status and display */
+.command-item {
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-left: 3px solid var(--cyberpunk-secondary);
+}
+
+.command-item.pending {
+    border-left-color: var(--cyberpunk-primary);
+    background-color: rgba(243, 230, 0, 0.05);
+}
+
+.command-item.completed {
+    border-left-color: #00ff00;
+    background-color: rgba(0, 255, 0, 0.05);
+}
+
+.command-item.failed {
+    border-left-color: var(--cyberpunk-accent);
+    background-color: rgba(255, 42, 109, 0.05);
+}
+
+.command-item.sent {
+    border-left-color: var(--cyberpunk-highlight);
+    background-color: rgba(5, 217, 232, 0.05);
+}
+
+.command-content {
+    font-family: monospace;
+    font-size: 1rem;
+    margin-bottom: 5px;
+    color: var(--cyberpunk-text);
+}
+
+.command-status {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.command-time {
+    font-size: 0.8rem;
+    color: var(--cyberpunk-text);
+    opacity: 0.7;
+    margin: 2px 0;
+}
+
+.command-id {
+    font-size: 0.8rem;
+    font-family: monospace;
+    color: var(--cyberpunk-secondary);
+    opacity: 0.5;
+}
+
+.no-commands {
+    color: var(--cyberpunk-text);
+    opacity: 0.5;
+    text-align: center;
+    padding: 10px;
+    font-style: italic;
+}
+
+.panel-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn.danger {
+    color: var(--cyberpunk-accent);
+    border-color: var(--cyberpunk-accent);
+}
+
+.btn.danger:hover {
+    background-color: rgba(255, 42, 109, 0.2);
+    box-shadow: 0 0 15px rgba(255, 42, 109, 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+    }
+    
+    .agent-details, .command-console, .command-library {
+        grid-column: 1;
+    }
+    
+    .agent-details {
+        grid-row: 1;
+    }
+    
+    .command-library {
+        grid-row: 2;
+    }
+    
+    .command-console {
+        grid-row: 3;
+    }
+}

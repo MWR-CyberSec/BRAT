@@ -6,22 +6,38 @@ import (
 	"github.com/Et43/BARK/service"
 )
 
-type Initialization struct { // <-- Fixed typo here (was Initalization)
-	userRepo  repository.UserRepository
-	userSvc   service.UserService
-	UserCtrl  controller.UserController
-	AuthCtrl  controller.AuthController
-	AgentCtrl controller.AgentController
+type Initialization struct {
+	UserRepo      repository.UserRepository
+	UserSvc       service.UserService
+	UserCtrl      controller.UserController
+	AuthCtrl      controller.AuthController
+	AgentCtrl     controller.AgentController
+	DashboardSvc  service.DashboardService
+	DashboardCtrl controller.DashboardController
+	CommandSvc    service.CommandService
+	CommandCtrl   controller.CommandController
 }
 
-func NewInitialization(userRepo repository.UserRepository,
-	userSvc service.UserService,
-	userCtrl controller.UserController, authCtrl controller.AuthController, agentCtrl controller.AgentController) *Initialization { // <-- Fixed return type here
-	return &Initialization{ // <-- Fixed type here
-		userRepo:  userRepo,
-		userSvc:   userSvc,
-		UserCtrl:  userCtrl,
-		AuthCtrl:  authCtrl,
-		AgentCtrl: agentCtrl,
+func NewInitialization(
+	userRepo repository.UserRepository,
+	userService service.UserService,
+	userController controller.UserController,
+	authController controller.AuthController,
+	agentController controller.AgentController,
+	dashboardService service.DashboardService,
+	dashboardController controller.DashboardController,
+	commandService service.CommandService,
+	commandController controller.CommandController,
+) *Initialization {
+	return &Initialization{
+		UserRepo:      userRepo,
+		UserSvc:       userService,
+		UserCtrl:      userController,
+		AuthCtrl:      authController,
+		AgentCtrl:     agentController,
+		DashboardSvc:  dashboardService,
+		DashboardCtrl: dashboardController,
+		CommandSvc:    commandService,
+		CommandCtrl:   commandController,
 	}
 }

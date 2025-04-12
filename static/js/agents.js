@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${agent.source || 'Unknown'}</td>
                 <td>${agent.is_stager ? 'Stager' : 'Agent'}</td>
                 <td>
-                    <button class="btn" data-agent-id="${agent.id}">
+                    <button class="btn" href="/dasboard/${agent.id}" data-agent-id="${agent.id}">
                         <span class="btn-icon">⚡</span> Manage
                     </button>
                 </td>
@@ -114,7 +114,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const connectBtn = row.querySelector('button');
             connectBtn.addEventListener('click', function() {
                 const agentId = this.getAttribute('data-agent-id');
-                connectToAgent(agentId);
+                console.log('Connecting to agent with ID:', agentId);
+                // Redirect to the agent's dashboard
+                window.location.href = `/dashboard/${agentId}`;
             });
         });
     }
@@ -133,10 +135,4 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
     
-    // Function to connect to an agent
-    function connectToAgent(agentId) {
-        console.log(`Connecting to agent with ID: ${agentId}`);
-        // This will be implemented in the future
-        alert(`Connection to agent ${agentId} will be implemented in a future update.`);
-    }
 });

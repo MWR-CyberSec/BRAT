@@ -24,3 +24,28 @@ If you are running it locally in a developement environment remember to:
 wire gen ./config/injector.go
 ```
 
+## Command Syntax
+
+When sending commands there is a specific syntax that should be used.
+
+#### **Syntax**
+```
+[MODULE].[COMMAND].(OPTIONAL | [VALUES])
+```
+
+#### **Basic Commands**
+
+**Basic**
+
+Ping -> `ping`
+Returns -> Pong
+
+**Recon**
+
+Browser Info -> `recon.browser_info`
+Returns -> Basic info about hooked browser
+
+Capture Cookies -> `recon.capture_cookies`
+Returns -> Any cookies (*With the HTTPOnly Flag Not Set*)
+
+
