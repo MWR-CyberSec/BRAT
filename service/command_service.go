@@ -107,7 +107,10 @@ func (s *CommandServiceImpl) DequeueCommand(agentID string) (*constant.QueuedCom
 	ctx := context.Background()
 
 	// Try first with the direct agent ID as provided
+	fmt.Printf("I AM NOT LOSING MY MIND?: '%s'\n", agentID)
+
 	queueKey := getCommandQueueKey(agentID)
+
 	fmt.Printf("Attempting to dequeue command using key: '%s'\n", queueKey)
 
 	cmdJSON, err := s.redisClient.LPop(ctx, queueKey).Result()

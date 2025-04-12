@@ -223,7 +223,7 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 				}
 
 				// Update agent's last seen timestamp
-				dbAgent, err := init.AgentCtrl.GetAgentByName(agentID)
+				_, err := init.AgentCtrl.GetAgentByName(agentID)
 				if err != nil {
 					println("Error retrieving agent:", err.Error())
 
