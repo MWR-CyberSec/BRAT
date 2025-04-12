@@ -56,9 +56,10 @@
 .dashboard-grid {
     display: grid;
     grid-template-columns: 1fr 2fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: minmax(400px, 1fr) minmax(400px, 1fr);
     gap: 20px;
     height: calc(100vh - 100px);
+    min-height: 800px;
 }
 
 .panel {
@@ -92,12 +93,20 @@
     padding: 15px;
     overflow-y: auto;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    /* Ensure content is properly contained */
+    min-height: 0;
 }
 
 /* Agent Details Panel */
 .agent-details {
     grid-column: 1;
     grid-row: 1 / span 2;
+    display: flex;
+    flex-direction: column;
+    /* Ensure proper containment with hidden overflow */
+    overflow: hidden;
 }
 
 .detail-item {
@@ -116,9 +125,19 @@
     color: var(--cyberpunk-text);
 }
 
+/* Fix for system info overflowing */
 .system-info {
-    margin-top: 20px;
+    overflow-y: auto;
+    margin-top: 15px;
+    max-height: 400px; /* Set a fixed max height */
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid rgba(5, 217, 232, 0.3);
+    padding-top: 15px;
+    /* Make sure it doesn't grow beyond its container */
+    flex: 0 1 auto;
 }
+
 
 .system-info h4 {
     color: var(--cyberpunk-primary);
@@ -150,15 +169,20 @@
     padding: 10px;
     border-radius: 3px;
     font-family: monospace;
-    height: 300px;
+    height: 300px; /* Fixed height that's causing the issue */
     overflow-y: auto;
     margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    max-height: 50vh;
 }
 
 .console-line {
     padding: 3px 0;
     display: flex;
     align-items: flex-start;
+    min-height: fit-content;
+    width: 100%;
 }
 
 .timestamp {
@@ -173,6 +197,7 @@
     color: var(--cyberpunk-text);
     word-break: break-word;
     flex: 1;
+    white-space: pre-wrap;
 }
 
 .system-message .message-content {
@@ -216,6 +241,7 @@
 .command-library {
     grid-column: 1;
     grid-row: 2;
+    overflow: auto;
 }
 
 .command-category {

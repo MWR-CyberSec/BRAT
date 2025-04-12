@@ -12,7 +12,7 @@ function initDashboard(agentId) {
     loadAgentDetails(agentId);
     
     // Set up websocket connection
-    setupWebSocket();
+    //setupWebSocket();
     
     // Set up command input
     setupCommandInput();
@@ -29,7 +29,7 @@ function initDashboard(agentId) {
 
 function loadAgentDetails(agentId) {
     // Fetch agent details from API
-    fetch(`/api/agents/${agentId}`, {
+    fetch(`/agents/${agentId}`, {
         method: 'GET',
         headers: {
             'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')
@@ -42,10 +42,15 @@ function loadAgentDetails(agentId) {
         return response.json();
     })
     .then(data => {
-        if (data && data.data) {
-            const agent = data.data;
+        if (data) {
+            console.log('Agent details fetched:', data);
+            const agent = data;
+            console.log('Agent details:', agent.system_info);
             updateAgentUI(agent);
         }
+
+        console.log("Not Called?");
+
     })
     .catch(error => {
         console.error('Error fetching agent details:', error);
@@ -69,6 +74,7 @@ function updateAgentUI(agent) {
     document.getElementById('detail-type').textContent = agent.is_stager ? 'Stager' : 'Full Agent';
     
     // Parse and display system info
+    console.log(agent);
     if (agent.system_info) {
         try {
             const systemInfo = JSON.parse(agent.system_info);
