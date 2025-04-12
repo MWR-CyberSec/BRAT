@@ -18,7 +18,7 @@ function initDashboard(agentId) {
     // Set up command input
     setupCommandInput();
     
-    // Set up command library
+    // Set up command library with predefined commands
     setupCommandLibrary();
     
     // Set up activity log controls
@@ -27,11 +27,11 @@ function initDashboard(agentId) {
     // Set up navigation controls
     setupNavigationControls();
     
-    // Set up a refresh interval for pending commands
+    // Set up refresh interval for pending commands and command history
     setInterval(() => {
         loadPendingCommands();
         loadCommandHistory();
-    }, 10000); // Refresh every 10 seconds
+    }, 5000); // Refresh every 5 seconds
 }
 
 function loadAgentDetails(agentId) {
@@ -81,7 +81,6 @@ function updateAgentUI(agent) {
     document.getElementById('detail-type').textContent = agent.is_stager ? 'Stager' : 'Full Agent';
     
     // Parse and display system info
-    console.log(agent);
     if (agent.system_info) {
         try {
             const systemInfo = JSON.parse(agent.system_info);
@@ -124,84 +123,6 @@ function displaySystemInfo(info) {
         container.appendChild(item);
     }
 }
-
-// function setupWebSocket() {
-//     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-//     const wsUrl = `${protocol}//${window.location.host}/ws/agents/${currentAgentId}`;
-    
-//     ws = new WebSocket(wsUrl);
-    
-//     ws.onopen = function() {
-//         console.log('WebSocket connection established');
-//         addConsoleMessage('WebSocket connection established', 'system');
-        
-//         // Authenticate the websocket
-//         if (localStorage.getItem('jwt_token')) {
-//             ws.send(JSON.stringify({
-//                 type: 'auth',
-//                 token: localStorage.getItem('jwt_token')
-//             }));
-//         }
-//     };
-    
-//     ws.onmessage = function(event) {
-//         console.log('WebSocket message received:', event.data);
-//         try {
-//             const data = JSON.parse(event.data);
-//             handleWebSocketMessage(data);
-//         } catch (e) {
-//             console.error('Error parsing WebSocket message:', e);
-//             addConsoleMessage('Received non-JSON message: ' + event.data, 'error');
-//         }
-//     };
-    
-//     ws.onclose = function() {
-//         console.log('WebSocket connection closed');
-//         addConsoleMessage('WebSocket connection closed', 'system');
-        
-//         // Attempt to reconnect after delay
-//         setTimeout(() => {
-//             if (document.visibilityState !== 'hidden') {
-//                 setupWebSocket();
-//             }
-//         }, 5000);
-//     };
-    
-//     ws.onerror = function(error) {
-//         console.error('WebSocket error:', error);
-//         addConsoleMessage('WebSocket error occurred', 'error');
-//     };
-// }
-
-// function handleWebSocketMessage(data) {
-//     // Handle different message types
-//     switch (data.type) {
-//         case 'auth_success':
-//             addConsoleMessage('Authentication successful', 'system');
-//             break;
-        
-//         case 'auth_error':
-//             addConsoleMessage('Authentication failed: ' + data.message, 'error');
-//             break;
-        
-//         case 'command_response':
-//             addConsoleMessage(data.message, 'response');
-//             addActivityLog(data.message, 'RESPONSE');
-//             break;
-        
-//         case 'agent_status':
-//             updateAgentStatus(data.status);
-//             break;
-        
-//         case 'error':
-//             addConsoleMessage('Error: ' + data.message, 'error');
-//             addActivityLog(data.message, 'ERROR');
-//             break;
-        
-//         default:
-//             addConsoleMessage('Received message: ' + JSON.stringify(data), 'system');
-//     }
-// }
 
 function updateAgentStatus(status) {
     const statusEl = document.getElementById('agent-status');
@@ -258,7 +179,7 @@ function setupCommandInput() {
         if (e.key === 'Enter') {
             const command = this.value.trim();
             if (command) {
-                // Queue the command instead of sending directly
+                // Queue the command
                 queueCommand(command);
                 this.value = '';
                 
@@ -287,35 +208,105 @@ function setupCommandInput() {
     });
 }
 
-// This functionality will be changed to send a reuqest to the to be implemnted
-// command rest endpoints that will store the command in the redis database
-// and send it to the agent when the next heartbeat comes through
-
-// function sendCommand(command) {
-//     if (!ws || ws.readyState !== WebSocket.OPEN) {
-//         addConsoleMessage('WebSocket not connected. Cannot send command.', 'error');
-//         return;
-//     }
-    
-//     addConsoleMessage(command, 'command');
-//     addActivityLog(command, 'COMMAND');
-    
-//     ws.send(JSON.stringify({
-//         type: 'command',
-//         agent_id: currentAgentId,
-//         command: command
-//     }));
-// }
-
 function setupCommandLibrary() {
-    const commandItems = document.querySelectorAll('.command-item');
+    // Clear existing command categories
+    const libraryContent = document.querySelector('.command-library .panel-content');
+    libraryContent.innerHTML = '';
     
-    commandItems.forEach(item => {
-        item.addEventListener('click', function() {
-            const command = this.getAttribute('data-command');
-            document.getElementById('command-input').value = command;
-            document.getElementById('command-input').focus();
+    // Define command categories with their commands
+    const commandCategories = [
+        {
+            name: 'Basic',
+            commands: [
+                { name: 'Ping', command: 'ping' }
+            ]
+        },
+        {
+            name: 'Reconnaissance',
+            commands: [
+                { name: 'Browser Info', command: 'recon.browser_info' },
+                { name: 'Capture Cookies', command: 'recon.capture_cookies' },
+                { name: 'Screen Info', command: 'recon.screen_info' },
+                { name: 'Location Info', command: 'recon.location_info' }
+            ]
+        },
+        {
+            name: 'DOM Manipulation',
+            commands: [
+                { name: 'Get Element', command: 'dom.get_element.', prompt: true, placeholder: 'Enter selector (e.g. #myId, .myClass)' },
+                { name: 'Get Elements', command: 'dom.get_elements.', prompt: true, placeholder: 'Enter selector (e.g. .myClass)' },
+                { name: 'Inject Script', command: 'dom.inject_script.', prompt: true, placeholder: 'Enter script URL' }
+            ]
+        },
+        {
+            name: 'Storage',
+            commands: [
+                { name: 'Get Local Storage', command: 'storage.get_local_storage' },
+                { name: 'Get Session Storage', command: 'storage.get_session_storage' },
+                { name: 'Set Local Storage', command: 'storage.set_local_storage' }
+            ]
+        },
+        {
+            name: 'Network',
+            commands: [
+                { name: 'Fetch Google', command: 'net.fetch.google.com' },
+                { name: 'WebSocket Info', command: 'net.websocket_info' }
+            ]
+        },
+        {
+            name: 'Code Execution',
+            commands: [
+                { name: 'Evaluate JS', command: 'exec.eval.', prompt: true, placeholder: 'Enter JavaScript code to execute' }
+            ]
+        }
+    ];
+    
+    // Create command categories and buttons
+    commandCategories.forEach(category => {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = 'command-category';
+        
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'category-header';
+        headerDiv.textContent = category.name;
+        
+        const commandListDiv = document.createElement('div');
+        commandListDiv.className = 'command-list';
+        
+        category.commands.forEach(cmd => {
+            const cmdDiv = document.createElement('div');
+            cmdDiv.className = 'command-item';
+            cmdDiv.setAttribute('data-command', cmd.command);
+            cmdDiv.textContent = cmd.name;
+            
+            if (cmd.prompt) {
+                cmdDiv.setAttribute('data-prompt', 'true');
+                cmdDiv.setAttribute('data-placeholder', cmd.placeholder || 'Enter value');
+            }
+            
+            cmdDiv.addEventListener('click', function() {
+                const baseCommand = this.getAttribute('data-command');
+                const needsPrompt = this.getAttribute('data-prompt') === 'true';
+                const placeholder = this.getAttribute('data-placeholder') || '';
+                
+                if (needsPrompt) {
+                    const userInput = prompt(placeholder);
+                    if (userInput !== null) { // Only if user didn't cancel
+                        document.getElementById('command-input').value = baseCommand + userInput;
+                    }
+                } else {
+                    document.getElementById('command-input').value = baseCommand;
+                }
+                
+                document.getElementById('command-input').focus();
+            });
+            
+            commandListDiv.appendChild(cmdDiv);
         });
+        
+        categoryDiv.appendChild(headerDiv);
+        categoryDiv.appendChild(commandListDiv);
+        libraryContent.appendChild(categoryDiv);
     });
 }
 
@@ -336,6 +327,14 @@ function setupNavigationControls() {
         // Refresh agent data
         loadAgentDetails(currentAgentId);
     });
+    
+    // Add a handler for the refresh commands button
+    document.getElementById('refresh-commands')?.addEventListener('click', function() {
+        console.log('Refreshing commands...');
+        loadPendingCommands();
+        loadCommandHistory();
+        addConsoleMessage('Commands refreshed', 'system');
+    });
 }
 
 function addConsoleMessage(message, type = 'response') {
@@ -351,7 +350,17 @@ function addConsoleMessage(message, type = 'response') {
     
     const contentSpan = document.createElement('span');
     contentSpan.className = 'message-content';
-    contentSpan.textContent = message;
+    
+    // Handle different types of messages
+    if (typeof message === 'object') {
+        try {
+            contentSpan.innerHTML = `<pre>${JSON.stringify(message, null, 2)}</pre>`;
+        } catch (e) {
+            contentSpan.textContent = 'Complex object: ' + message.toString();
+        }
+    } else {
+        contentSpan.textContent = message;
+    }
     
     line.appendChild(timestampSpan);
     line.appendChild(contentSpan);
@@ -386,6 +395,11 @@ function addActivityLog(activity, type) {
 }
 
 function formatDateTime(date) {
+    // If date is a string, convert it to a Date object
+    if (typeof date === 'string') {
+        date = new Date(date);
+    }
+    
     return date.toLocaleString(undefined, {
         year: 'numeric',
         month: 'short',
@@ -396,30 +410,12 @@ function formatDateTime(date) {
     });
 }
 
-// Update agents_modal.tmpl to include links to the dashboard
-document.addEventListener('DOMContentLoaded', function() {
-    // Extend the existing agents list to include dashboard links
-    const agentRows = document.querySelectorAll('#agents-table-body tr');
-    
-    agentRows.forEach(row => {
-        const actionsCell = row.querySelector('td:last-child');
-        if (actionsCell) {
-            const agentId = row.getAttribute('data-agent-id');
-            
-            // Add dashboard link
-            const dashboardLink = document.createElement('a');
-            dashboardLink.href = `/dashboard/${agentId}`;
-            dashboardLink.className = 'btn btn-small';
-            dashboardLink.innerHTML = '<i class="fas fa-terminal btn-icon"></i> Console';
-            
-            actionsCell.appendChild(dashboardLink);
-        }
-    });
-});
-
 function queueCommand(command) {
     const queueId = window.agentName || currentAgentId;
     console.log(`Queueing command for agent: ${queueId}, Command: ${command}`);
+    
+    // Display the command in the console
+    addConsoleMessage(`> ${command}`, 'command');
     
     fetch(`/commands/agent/${queueId}`, {
         method: 'POST',
@@ -441,7 +437,7 @@ function queueCommand(command) {
         addConsoleMessage(`Command queued: ${command}`, 'system');
         addActivityLog(`Command queued: ${command}`, 'COMMAND');
         
-        // Refresh pending commands using the same ID
+        // Refresh pending commands
         loadPendingCommands();
     })
     .catch(error => {
@@ -498,48 +494,12 @@ function loadCommandHistory() {
         console.log('Command history:', data);
         // Make sure we're handling the correct data structure
         const commands = data.commands || [];
-        // Update UI to show command history
-        updateCommandHistoryUI(commands);
+        
+        // Process completed commands to show in console
+        processCompletedCommands(commands);
     })
     .catch(error => {
         console.error('Error loading command history:', error);
-    });
-}
-
-// Update the formatDateTime function to handle both string dates and Date objects
-function formatDateTime(date) {
-    // If date is a string, convert it to a Date object
-    if (typeof date === 'string') {
-        date = new Date(date);
-    }
-    
-    return date.toLocaleString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
-}
-
-function setupNavigationControls() {
-    document.getElementById('back-to-main').addEventListener('click', function() {
-        // Go back to main agents page
-        window.location.href = '/';
-    });
-    
-    document.getElementById('refresh-agent').addEventListener('click', function() {
-        // Refresh agent data
-        loadAgentDetails(currentAgentId);
-    });
-    
-    // Add a handler for the refresh commands button
-    document.getElementById('refresh-commands')?.addEventListener('click', function() {
-        console.log('Refreshing commands...');
-        loadPendingCommands();
-        loadCommandHistory();
-        addConsoleMessage('Commands refreshed', 'system');
     });
 }
 
@@ -567,47 +527,47 @@ function updatePendingCommandsUI(commands) {
     });
 }
 
-// Update the command history UI
-function updateCommandHistoryUI(commands) {
-    const historyList = document.getElementById('command-history');
-    if (!historyList) return;
+// Process command history to display responses in the console
+function processCompletedCommands(commands) {
+    if (!commands || commands.length === 0) return;
     
-    historyList.innerHTML = '';
+    // Get only completed commands since last check
+    const completedCommands = commands.filter(cmd => 
+        (cmd.Status === 'completed' || cmd.status === 'completed' || cmd.Status === 'failed' || cmd.status === 'failed') &&
+        !cmd.processedByConsole
+    );
     
-    if (!commands || commands.length === 0) {
-        historyList.innerHTML = '<div class="no-commands">No command history</div>';
-        return;
-    }
+    // Sort commands by creation time
+    completedCommands.sort((a, b) => {
+        const timeA = new Date(a.CreatedAt || a.created_at);
+        const timeB = new Date(b.CreatedAt || b.created_at);
+        return timeA - timeB;
+    });
     
-    commands.forEach(cmd => {
+    // Process each completed command to show in console
+    completedCommands.forEach(cmd => {
         const status = cmd.Status || cmd.status;
-        const cmdElement = document.createElement('div');
-        cmdElement.className = `command-item ${status.toLowerCase()}`;
-        
-        let responseHtml = '';
+        const command = cmd.Command || cmd.command;
         const response = cmd.Response || cmd.response;
         
-        if (response) {
-            try {
-                // Try to parse the response as JSON for better display
+        // Display response in console
+        try {
+            if (response) {
                 const responseObj = JSON.parse(response);
-                responseHtml = `<pre class="command-response">${JSON.stringify(responseObj, null, 2)}</pre>`;
-            } catch (e) {
-                // If not JSON, display as is
-                responseHtml = `<div class="command-response">${response}</div>`;
+                addConsoleMessage(responseObj, 'response');
+            } else {
+                addConsoleMessage(`Command ${status}: No response data`, 'system');
+            }
+        } catch (e) {
+            // If not JSON, display as is
+            if (response) {
+                addConsoleMessage(response, 'response');
+            } else {
+                addConsoleMessage(`Command ${status}: No response data`, 'system');
             }
         }
         
-        const createdAt = cmd.CreatedAt || cmd.created_at;
-        const completedAt = cmd.CompletedAt || cmd.completed_at;
-        
-        cmdElement.innerHTML = `
-            <div class="command-content">${cmd.Command || cmd.command}</div>
-            <div class="command-status ${status.toLowerCase()}">${status.toUpperCase()}</div>
-            <div class="command-time">Queued: ${formatDateTime(createdAt)}</div>
-            ${completedAt ? `<div class="command-time">Completed: ${formatDateTime(completedAt)}</div>` : ''}
-            ${responseHtml}
-        `;
-        historyList.appendChild(cmdElement);
+        // Mark command as processed
+        cmd.processedByConsole = true;
     });
 }

@@ -138,7 +138,6 @@
     flex: 0 1 auto;
 }
 
-
 .system-info h4 {
     color: var(--cyberpunk-primary);
     margin-bottom: 10px;
@@ -161,7 +160,9 @@
 /* Command Console Panel */
 .command-console {
     grid-column: 2;
-    grid-row: 1;
+    grid-row: 1 / span 2; /* Expanded to cover both rows */
+    display: flex;
+    flex-direction: column;
 }
 
 .console-output {
@@ -169,12 +170,13 @@
     padding: 10px;
     border-radius: 3px;
     font-family: monospace;
-    height: 300px; /* Fixed height that's causing the issue */
+    flex: 1;
     overflow-y: auto;
     margin-bottom: 10px;
     display: flex;
     flex-direction: column;
-    max-height: 50vh;
+    min-height: 200px;
+    max-height: calc(70vh - 100px);
 }
 
 .console-line {
@@ -191,6 +193,7 @@
     font-size: 0.8rem;
     opacity: 0.7;
     width: 80px;
+    flex-shrink: 0;
 }
 
 .message-content {
@@ -200,6 +203,18 @@
     white-space: pre-wrap;
 }
 
+.message-content pre {
+    margin: 0;
+    font-family: monospace;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 8px;
+    border-radius: 3px;
+    border-left: 2px solid var(--cyberpunk-secondary);
+    overflow-x: auto;
+}
+
 .system-message .message-content {
     color: var(--cyberpunk-secondary);
     font-style: italic;
@@ -207,6 +222,7 @@
 
 .command-line .message-content {
     color: var(--cyberpunk-primary);
+    font-weight: bold;
 }
 
 .error-line .message-content {
@@ -219,6 +235,7 @@
     padding: 10px;
     border-radius: 3px;
     align-items: center;
+    margin-bottom: 15px;
 }
 
 .console-prompt {
@@ -282,48 +299,121 @@
     color: var(--cyberpunk-secondary);
 }
 
-/* Activity Log Panel */
-.activity-log {
-    grid-column: 2;
-    grid-row: 2;
+/* Pending Commands Panel - Now integrated into Command Console */
+.command-queue {
+    margin-top: 0;
+    margin-bottom: 15px;
+    background-color: transparent;
+    box-shadow: none;
+    border-left: none;
 }
 
-.activity-type {
+.command-queue .panel-header {
+    padding: 8px 0;
+    background-color: transparent;
+    border-bottom: 1px solid rgba(5, 217, 232, 0.3);
+}
+
+.command-queue .panel-content {
+    padding: 10px 0;
+}
+
+/* Activity Log Panel - Now merged into Command Console */
+.activity-log {
+    display: none; /* Hide the activity log panel */
+}
+
+/* Command status and display */
+.command-item {
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-left: 3px solid var(--cyberpunk-secondary);
+}
+
+.command-item.pending {
+    border-left-color: var(--cyberpunk-primary);
+    background-color: rgba(243, 230, 0, 0.05);
+}
+
+.command-item.completed {
+    border-left-color: #00ff00;
+    background-color: rgba(0, 255, 0, 0.05);
+}
+
+.command-item.failed {
+    border-left-color: var(--cyberpunk-accent);
+    background-color: rgba(255, 42, 109, 0.05);
+}
+
+.command-item.sent {
+    border-left-color: var(--cyberpunk-highlight);
+    background-color: rgba(5, 217, 232, 0.05);
+}
+
+.command-content {
+    font-family: monospace;
+    font-size: 1rem;
+    margin-bottom: 5px;
+    color: var(--cyberpunk-text);
+}
+
+.command-status {
+    display: inline-block;
     padding: 2px 6px;
     border-radius: 3px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
     font-weight: bold;
+    margin-right: 8px;
 }
 
-.activity-type.command {
-    background-color: rgba(0, 255, 210, 0.1);
+.command-time {
+    font-size: 0.8rem;
+    color: var(--cyberpunk-text);
+    opacity: 0.7;
+    margin: 2px 0;
+}
+
+.command-id {
+    font-size: 0.8rem;
+    font-family: monospace;
     color: var(--cyberpunk-secondary);
+    opacity: 0.5;
 }
 
-.activity-type.response {
-    background-color: rgba(243, 230, 0, 0.1);
-    color: var(--cyberpunk-primary);
+.no-commands {
+    color: var(--cyberpunk-text);
+    opacity: 0.5;
+    text-align: center;
+    padding: 10px;
+    font-style: italic;
 }
 
-.activity-type.connection {
-    background-color: rgba(0, 255, 0, 0.1);
-    color: #00ff00;
+.panel-actions {
+    display: flex;
+    gap: 10px;
 }
 
-.activity-type.error {
-    background-color: rgba(255, 42, 109, 0.1);
+.btn.danger {
     color: var(--cyberpunk-accent);
+    border-color: var(--cyberpunk-accent);
+}
+
+.btn.danger:hover {
+    background-color: rgba(255, 42, 109, 0.2);
+    box-shadow: 0 0 15px rgba(255, 42, 109, 0.5);
 }
 
 /* Responsive adjustments */
 @media (max-width: 992px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto auto;
+        grid-template-rows: auto auto auto;
     }
     
-    .agent-details, .command-console, .command-library, .activity-log {
+    .agent-details, .command-console, .command-library {
         grid-column: 1;
     }
     
@@ -331,15 +421,11 @@
         grid-row: 1;
     }
     
-    .command-console {
+    .command-library {
         grid-row: 2;
     }
     
-    .command-library {
+    .command-console {
         grid-row: 3;
-    }
-    
-    .activity-log {
-        grid-row: 4;
     }
 }
