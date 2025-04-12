@@ -11,6 +11,7 @@ import (
 )
 
 var db = wire.NewSet(InitDB)
+var redisSet = wire.NewSet(InitRedis)
 
 var userServiceSet = wire.NewSet(service.UserServiceInit, wire.Bind(new(service.UserService), new(*service.UserServiceImpl)))
 
@@ -28,6 +29,10 @@ var agentServiceSet = wire.NewSet(service.AgentServiceInit, wire.Bind(new(servic
 
 var agentCtrlSet = wire.NewSet(controller.AgentControllerInit, wire.Bind(new(controller.AgentController), new(*controller.AgentControllerImpl)))
 
+var commandServiceSet = wire.NewSet(service.CommandServiceInit, wire.Bind(new(service.CommandService), new(*service.CommandServiceImpl)))
+
+var commandCtrlSet = wire.NewSet(controller.CommandControllerInit, wire.Bind(new(controller.CommandController), new(*controller.CommandControllerImpl)))
+
 // Make sure dashboardServiceSet uses agentService
 var dashboardServiceSet = wire.NewSet(
 	service.DashboardServiceInit,
@@ -42,16 +47,19 @@ var dashboardCtrlSet = wire.NewSet(
 func Init() *Initialization {
 	wire.Build(
 		db,
+		redisSet,
 		userRepoSet,
 		agentRepoSet,
 		userServiceSet,
 		authServiceSet,
 		agentServiceSet,
 		dashboardServiceSet,
+		commandServiceSet,
 		userCtrlSet,
 		authCtrlSet,
 		agentCtrlSet,
 		dashboardCtrlSet,
+		commandCtrlSet,
 		NewInitialization,
 	)
 	return nil

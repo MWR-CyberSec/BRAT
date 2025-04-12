@@ -9,6 +9,7 @@ init-dependency:
 	go get -u github.com/gorilla/websocket
 	go get -u github.com/air-verse/air@latest
 	go get -u github.com/redis/go-redis/v9
+	go get -u github.com/google/uuid
 
 
 build-docker:

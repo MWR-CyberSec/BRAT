@@ -18,6 +18,7 @@ type AgentService interface {
 	GetStagers(*gin.Context)
 	SetStager(name string, isStager bool) error
 	ClearAgents(*gin.Context)
+	GetAgentByName(name string) (*dao.Agent, error)
 }
 
 type AgentServiceImpl struct {
@@ -32,6 +33,10 @@ func (s *AgentServiceImpl) GetAgents(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, agents)
+}
+
+func (s *AgentServiceImpl) GetAgentByName(name string) (*dao.Agent, error) {
+	return s.agentsRepository.GetAgentByName(name)
 }
 
 func (s *AgentServiceImpl) ClearAgents(c *gin.Context) {

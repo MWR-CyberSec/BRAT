@@ -10,10 +10,12 @@ type Initialization struct {
 	UserRepo      repository.UserRepository
 	UserSvc       service.UserService
 	UserCtrl      controller.UserController
-	AuthCtrl      controller.AuthController // Change from AuthController
+	AuthCtrl      controller.AuthController
 	AgentCtrl     controller.AgentController
 	DashboardSvc  service.DashboardService
-	DashboardCtrl controller.DashboardController // Change from DashboardController
+	DashboardCtrl controller.DashboardController
+	CommandSvc    service.CommandService
+	CommandCtrl   controller.CommandController
 }
 
 func NewInitialization(
@@ -21,17 +23,21 @@ func NewInitialization(
 	userService service.UserService,
 	userController controller.UserController,
 	authController controller.AuthController,
-	agentCtrl controller.AgentController,
-	dashboardService service.DashboardService, // Add this if missing
+	agentController controller.AgentController,
+	dashboardService service.DashboardService,
 	dashboardController controller.DashboardController,
+	commandService service.CommandService,
+	commandController controller.CommandController,
 ) *Initialization {
 	return &Initialization{
 		UserRepo:      userRepo,
 		UserSvc:       userService,
 		UserCtrl:      userController,
 		AuthCtrl:      authController,
-		AgentCtrl:     agentCtrl,
-		DashboardSvc:  dashboardService, // Add this if missing
+		AgentCtrl:     agentController,
+		DashboardSvc:  dashboardService,
 		DashboardCtrl: dashboardController,
+		CommandSvc:    commandService,
+		CommandCtrl:   commandController,
 	}
 }

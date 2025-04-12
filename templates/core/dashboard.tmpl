@@ -65,8 +65,14 @@
             
             <!-- Command Console Panel -->
             <div class="panel command-console">
+
                 <div class="panel-header">
                     <h3>Command Console</h3>
+                    <div class="panel-actions">
+                        <button id="clear-all-commands" class="btn btn-small danger">
+                            <span class="btn-icon">⚠️</span> Clear All Commands
+                        </button>
+                    </div>
                 </div>
                 <div class="panel-content">
                     <div class="console-output" id="console-output">
@@ -82,6 +88,35 @@
                     <div class="console-input-container">
                         <span class="console-prompt">></span>
                         <input type="text" id="command-input" class="console-input" placeholder="Enter command..." autofocus>
+                    </div>
+
+                    <div class="panel command-queue">
+                        <div class="panel-header">
+                            <h3>Pending Commands</h3>
+                            <div class="panel-actions">
+                                <button id="refresh-commands" class="btn btn-small">
+                                    <i class="fas fa-sync btn-icon"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="panel-content">
+                            <div id="pending-commands">
+                                <!-- Will be populated with pending commands -->
+                                <div class="no-commands">Loading pending commands...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="panel command-history">
+                        <div class="panel-header">
+                            <h3>Command History</h3>
+                        </div>
+                        <div class="panel-content">
+                            <div id="command-history">
+                                <!-- Will be populated with command history -->
+                                <div class="no-commands">Loading command history...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -164,7 +199,7 @@
     <script>
         // Initialize dashboard with agent ID
         document.addEventListener('DOMContentLoaded', function() {
-            initDashboard('{{ .agent.ID }}');
+            initDashboard('{{ .agent.Name }}');
         });
     </script>
 </body>

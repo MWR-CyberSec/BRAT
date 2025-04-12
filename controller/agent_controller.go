@@ -14,10 +14,15 @@ type AgentController interface {
 	GetStagers(*gin.Context)
 	SetStager(name string, isStager bool) error
 	ClearAgents(*gin.Context)
+	GetAgentByName(name string) (*dao.Agent, error)
 }
 
 type AgentControllerImpl struct {
 	agentService service.AgentService
+}
+
+func (ctrl *AgentControllerImpl) GetAgentByName(name string) (*dao.Agent, error) {
+	return ctrl.agentService.GetAgentByName(name)
 }
 
 func (u *AgentControllerImpl) ClearAgents(c *gin.Context) {

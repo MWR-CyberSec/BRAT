@@ -17,6 +17,7 @@ import (
 
 func Init() *Initialization {
 	gormDB := InitDB()
+	redis := InitRedis()
 	userRepositoryImpl := repository.UserRepositoryInit(gormDB)
 	userServiceImpl := service.UserServiceInit(userRepositoryImpl)
 	userControllerImpl := controller.UserControllerInit(userServiceImpl)
@@ -26,8 +27,10 @@ func Init() *Initialization {
 	agentServiceImpl := service.AgentServiceInit(agentRepositoryImpl)
 	agentControllerImpl := controller.AgentControllerInit(agentServiceImpl)
 	dashboardServiceImpl := service.DashboardServiceInit(agentServiceImpl)
+	commandServiceImpl := service.CommandServiceInit(redis)
+	commandControllerImpl := controller.CommandControllerInit(commandServiceImpl)
 	dashboardControllerImpl := controller.DashboardControllerInit(dashboardServiceImpl)
-	initialization := NewInitialization(userRepositoryImpl, userServiceImpl, userControllerImpl, authControllerImpl, agentControllerImpl, dashboardServiceImpl, dashboardControllerImpl)
+	initialization := NewInitialization(userRepositoryImpl, userServiceImpl, userControllerImpl, authControllerImpl, agentControllerImpl, dashboardServiceImpl, dashboardControllerImpl, commandServiceImpl, commandControllerImpl)
 	return initialization
 }
 
@@ -55,3 +58,7 @@ var agentCtrlSet = wire.NewSet(controller.AgentControllerInit, wire.Bind(new(con
 var dashboardServiceSet = wire.NewSet(service.DashboardServiceInit, wire.Bind(new(service.DashboardService), new(*service.DashboardServiceImpl)))
 
 var dashboardCtrlSet = wire.NewSet(controller.DashboardControllerInit, wire.Bind(new(controller.DashboardController), new(*controller.DashboardControllerImpl)))
+
+var commandServiceSet = wire.NewSet(service.CommandServiceInit, wire.Bind(new(service.CommandService), new(*service.CommandServiceImpl)))
+
+var commandCtrlSet = wire.NewSet(controller.CommandControllerInit, wire.Bind(new(controller.CommandController), new(*controller.CommandControllerImpl)))

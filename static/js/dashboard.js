@@ -11,8 +11,9 @@ function initDashboard(agentId) {
     // Load agent details
     loadAgentDetails(agentId);
     
-    // Set up websocket connection
-    //setupWebSocket();
+    // Load pending commands and history
+    loadPendingCommands();
+    loadCommandHistory();
     
     // Set up command input
     setupCommandInput();
@@ -25,6 +26,12 @@ function initDashboard(agentId) {
     
     // Set up navigation controls
     setupNavigationControls();
+    
+    // Set up a refresh interval for pending commands
+    setInterval(() => {
+        loadPendingCommands();
+        loadCommandHistory();
+    }, 10000); // Refresh every 10 seconds
 }
 
 function loadAgentDetails(agentId) {
@@ -45,12 +52,12 @@ function loadAgentDetails(agentId) {
         if (data) {
             console.log('Agent details fetched:', data);
             const agent = data;
-            console.log('Agent details:', agent.system_info);
+            // Store the agent name for command queueing
+            window.agentName = agent.name;
+            console.log('Agent name set:', window.agentName);
+            
             updateAgentUI(agent);
         }
-
-        console.log("Not Called?");
-
     })
     .catch(error => {
         console.error('Error fetching agent details:', error);
@@ -211,43 +218,70 @@ function updateAgentStatus(status) {
     addActivityLog('Agent status changed to ' + status.toUpperCase(), 'CONNECTION');
 }
 
+function clearAllCommands() {
+    fetch('/commands/clear', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to clear commands');
+        }
+        return response.json();
+    })
+    .then(data => {
+        addConsoleMessage('All commands cleared from Redis server', 'system');
+        addActivityLog('All commands cleared', 'SYSTEM');
+        
+        // Refresh the commands displays
+        loadPendingCommands();
+        loadCommandHistory();
+    })
+    .catch(error => {
+        console.error('Error clearing commands:', error);
+        addConsoleMessage('Error clearing commands: ' + error.message, 'error');
+    });
+}
+
 function setupCommandInput() {
     const commandInput = document.getElementById('command-input');
+
+    document.getElementById('clear-all-commands')?.addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear all commands from the Redis server? This action cannot be undone.')) {
+            clearAllCommands();
+        }
+    });
     
     commandInput.addEventListener('keydown', function(e) {
-        // Handle Enter key to send command
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            const command = commandInput.value.trim();
-            
+        if (e.key === 'Enter') {
+            const command = this.value.trim();
             if (command) {
-                sendCommand(command);
-                commandInput.value = '';
+                // Queue the command instead of sending directly
+                queueCommand(command);
+                this.value = '';
                 
-                // Add to history
-                commandHistory.unshift(command);
-                if (commandHistory.length > 50) {
-                    commandHistory.pop();
-                }
-                historyIndex = -1;
+                // Add to command history for this session
+                commandHistory.push(command);
+                historyIndex = commandHistory.length;
             }
-        }
-        
-        // Handle up/down arrows for command history
-        if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            if (historyIndex < commandHistory.length - 1) {
-                historyIndex++;
-                commandInput.value = commandHistory[historyIndex];
-            }
-        } else if (e.key === 'ArrowDown') {
+        } else if (e.key === 'ArrowUp') {
+            // Navigate command history (up)
             e.preventDefault();
             if (historyIndex > 0) {
                 historyIndex--;
-                commandInput.value = commandHistory[historyIndex];
-            } else if (historyIndex === 0) {
-                historyIndex = -1;
-                commandInput.value = '';
+                this.value = commandHistory[historyIndex];
+            }
+        } else if (e.key === 'ArrowDown') {
+            // Navigate command history (down)
+            e.preventDefault();
+            if (historyIndex < commandHistory.length - 1) {
+                historyIndex++;
+                this.value = commandHistory[historyIndex];
+            } else if (historyIndex === commandHistory.length - 1) {
+                historyIndex = commandHistory.length;
+                this.value = '';
             }
         }
     });
@@ -382,3 +416,198 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+function queueCommand(command) {
+    const queueId = window.agentName || currentAgentId;
+    console.log(`Queueing command for agent: ${queueId}, Command: ${command}`);
+    
+    fetch(`/commands/agent/${queueId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')
+        },
+        body: JSON.stringify({
+            command: command
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to queue command');
+        }
+        return response.json();
+    })
+    .then(data => {
+        addConsoleMessage(`Command queued: ${command}`, 'system');
+        addActivityLog(`Command queued: ${command}`, 'COMMAND');
+        
+        // Refresh pending commands using the same ID
+        loadPendingCommands();
+    })
+    .catch(error => {
+        console.error('Error queueing command:', error);
+        addConsoleMessage('Error queueing command: ' + error.message, 'error');
+    });
+}
+
+// Load pending commands for the current agent
+function loadPendingCommands() {
+    const queueId = window.agentName || currentAgentId;
+    
+    fetch(`/commands/agent/${queueId}/pending`, {
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to load pending commands');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Pending commands:', data);
+        // Make sure we're handling the correct data structure
+        const commands = data.commands || [];
+        // Update UI to show pending commands
+        updatePendingCommandsUI(commands);
+    })
+    .catch(error => {
+        console.error('Error loading pending commands:', error);
+    });
+}
+
+// Load command history for the current agent
+function loadCommandHistory() {
+    const queueId = window.agentName || currentAgentId;
+    
+    fetch(`/commands/agent/${queueId}/history`, {
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to load command history');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Command history:', data);
+        // Make sure we're handling the correct data structure
+        const commands = data.commands || [];
+        // Update UI to show command history
+        updateCommandHistoryUI(commands);
+    })
+    .catch(error => {
+        console.error('Error loading command history:', error);
+    });
+}
+
+// Update the formatDateTime function to handle both string dates and Date objects
+function formatDateTime(date) {
+    // If date is a string, convert it to a Date object
+    if (typeof date === 'string') {
+        date = new Date(date);
+    }
+    
+    return date.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
+
+function setupNavigationControls() {
+    document.getElementById('back-to-main').addEventListener('click', function() {
+        // Go back to main agents page
+        window.location.href = '/';
+    });
+    
+    document.getElementById('refresh-agent').addEventListener('click', function() {
+        // Refresh agent data
+        loadAgentDetails(currentAgentId);
+    });
+    
+    // Add a handler for the refresh commands button
+    document.getElementById('refresh-commands')?.addEventListener('click', function() {
+        console.log('Refreshing commands...');
+        loadPendingCommands();
+        loadCommandHistory();
+        addConsoleMessage('Commands refreshed', 'system');
+    });
+}
+
+// Update the pending commands UI
+function updatePendingCommandsUI(commands) {
+    const pendingList = document.getElementById('pending-commands');
+    if (!pendingList) return;
+    
+    pendingList.innerHTML = '';
+    
+    if (!commands || commands.length === 0) {
+        pendingList.innerHTML = '<div class="no-commands">No pending commands</div>';
+        return;
+    }
+    
+    commands.forEach(cmd => {
+        const cmdElement = document.createElement('div');
+        cmdElement.className = 'command-item pending';
+        cmdElement.innerHTML = `
+            <div class="command-content">${cmd.Command || cmd.command}</div>
+            <div class="command-time">Queued: ${formatDateTime(cmd.CreatedAt || cmd.created_at)}</div>
+            <div class="command-id">ID: ${cmd.ID || cmd.id}</div>
+        `;
+        pendingList.appendChild(cmdElement);
+    });
+}
+
+// Update the command history UI
+function updateCommandHistoryUI(commands) {
+    const historyList = document.getElementById('command-history');
+    if (!historyList) return;
+    
+    historyList.innerHTML = '';
+    
+    if (!commands || commands.length === 0) {
+        historyList.innerHTML = '<div class="no-commands">No command history</div>';
+        return;
+    }
+    
+    commands.forEach(cmd => {
+        const status = cmd.Status || cmd.status;
+        const cmdElement = document.createElement('div');
+        cmdElement.className = `command-item ${status.toLowerCase()}`;
+        
+        let responseHtml = '';
+        const response = cmd.Response || cmd.response;
+        
+        if (response) {
+            try {
+                // Try to parse the response as JSON for better display
+                const responseObj = JSON.parse(response);
+                responseHtml = `<pre class="command-response">${JSON.stringify(responseObj, null, 2)}</pre>`;
+            } catch (e) {
+                // If not JSON, display as is
+                responseHtml = `<div class="command-response">${response}</div>`;
+            }
+        }
+        
+        const createdAt = cmd.CreatedAt || cmd.created_at;
+        const completedAt = cmd.CompletedAt || cmd.completed_at;
+        
+        cmdElement.innerHTML = `
+            <div class="command-content">${cmd.Command || cmd.command}</div>
+            <div class="command-status ${status.toLowerCase()}">${status.toUpperCase()}</div>
+            <div class="command-time">Queued: ${formatDateTime(createdAt)}</div>
+            ${completedAt ? `<div class="command-time">Completed: ${formatDateTime(completedAt)}</div>` : ''}
+            ${responseHtml}
+        `;
+        historyList.appendChild(cmdElement);
+    });
+}
