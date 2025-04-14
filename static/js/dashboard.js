@@ -174,6 +174,12 @@ function setupCommandInput() {
             clearAllCommands();
         }
     });
+
+    document.getElementById('remote_view')?.addEventListener('click', function() {
+        const remote_panel = document.getElementById('remote_view_panel');
+        remote_panel.style.display = remote_panel.style.display === 'block' ? 'none' : 'block';
+        this.textContent = remote_panel.style.display === 'block' ? 'Hide Remote View' : 'Show Remote View';
+    });
     
     commandInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
@@ -219,6 +225,12 @@ function setupCommandLibrary() {
             name: 'Basic',
             commands: [
                 { name: 'Ping', command: 'ping' }
+            ]
+        },
+        {
+            name: 'Attacks',
+            commands: [
+                { name: 'Enable Remote View', command: 'attacks.enable_remote_view' },
             ]
         },
         {
