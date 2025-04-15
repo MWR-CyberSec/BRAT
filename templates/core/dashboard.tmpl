@@ -72,6 +72,9 @@
                         <button id="clear-all-commands" class="btn btn-small danger">
                             <span class="btn-icon">⚠️</span> Clear All Commands
                         </button>
+                        <button id="remote-view-panel" class="btn btn-small info">
+                            Remote View Panel
+                        </button>
                     </div>
                 </div>
                 <div class="panel-content">
@@ -131,6 +134,13 @@
                             <div class="command-item" data-command="sleep 10">Sleep (10s)</div>
                             <div class="command-item" data-command="terminate">Terminate Agent</div>
                             <div class="command-item" data-command="exfiltrate_data">Exfiltrate Data</div>
+                        </div>
+                    </div>
+
+                    <div class="command-category">
+                        <div class="category-header">Attacks</div>
+                        <div class="command-list">
+                            <div class="command-item" id='remote-view' data-command="remote_view">Remote View</div>
                         </div>
                     </div>
                 </div>

