@@ -168,6 +168,8 @@ function clearAllCommands() {
 
 function setupCommandInput() {
     const commandInput = document.getElementById('command-input');
+    const remote = document.getElementById('remote-view-panel');
+    remote.style.display = 'none';
 
     document.getElementById('clear-all-commands')?.addEventListener('click', function() {
         if (confirm('Are you sure you want to clear all commands from the Redis server? This action cannot be undone.')) {
@@ -188,6 +190,11 @@ function setupCommandInput() {
                 // Queue the command
                 queueCommand(command);
                 this.value = '';
+
+                if (command.startsWith('attacks.remote_view')) {
+                    const remote = document.getElementById('remote-view-panel');
+                    remote.style.display = 'block';
+                }
                 
                 // Add to command history for this session
                 commandHistory.push(command);
@@ -230,7 +237,11 @@ function setupCommandLibrary() {
         {
             name: 'Attacks',
             commands: [
+<<<<<<< HEAD
                 { name: 'Enable Remote View', command: 'attacks.enable_remote_view' },
+=======
+                {name: "Remote View", command: 'attacks.remote_view'}
+>>>>>>> b3b2514e51da6e8a4bd2cf1c0e1b4edc9eed4673
             ]
         },
         {
