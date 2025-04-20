@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 
+	"encoding/json"
 	"fmt"
 )
 
@@ -15,6 +16,9 @@ type CommandController interface {
 	GetPendingCommands(c *gin.Context)
 	GetCommandHistory(c *gin.Context)
 	ClearAllCommands(c *gin.Context)
+
+	GetLatestRemoteView(c *gin.Context)
+	GetRemoteViewHistory(c *gin.Context)
 }
 
 type CommandControllerImpl struct {
@@ -91,6 +95,41 @@ func (c *CommandControllerImpl) GetCommandHistory(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"commands": commands})
+}
+
+// GetLatestRemoteView retrieves the latest remote view data for an agent
+func (c *CommandControllerImpl) GetLatestRemoteView(ctx *gin.Context) {
+	agentID := ctx.Param("agentID")
+
+	data, err := c.commandService.GetLatestRemoteViewData(agentID)
+	if err != nil {
+		log.Error("Failed to get remote view data: ", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get remote view data"})
+		return
+	}
+
+	// Try to parse the result to a JSON object for the response
+	var resultObj interface{}
+	if err := json.Unmarshal([]byte(data), &resultObj); err == nil {
+		ctx.JSON(http.StatusOK, gin.H{"remoteView": resultObj})
+	} else {
+		// If parsing fails, return the raw string
+		ctx.JSON(http.StatusOK, gin.H{"remoteView": data})
+	}
+}
+
+// GetRemoteViewHistory retrieves the history of remote view data for an agent
+func (c *CommandControllerImpl) GetRemoteViewHistory(ctx *gin.Context) {
+	agentID := ctx.Param("agentID")
+
+	history, err := c.commandService.GetRemoteViewHistory(agentID)
+	if err != nil {
+		log.Error("Failed to get remote view history: ", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get remote view history"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"history": history})
 }
 
 func CommandControllerInit(commandService service.CommandService) *CommandControllerImpl {

