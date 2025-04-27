@@ -19,6 +19,10 @@ type CommandService interface {
 	UpdateCommandStatus(agentID string, commandID string, status string, response string) error
 	GetCommandHistory(agentID string) ([]*constant.QueuedCommand, error)
 	ClearAllCommands() error
+
+	StoreRemoteViewData(agentID string, result string) error
+	GetLatestRemoteViewData(agentID string) (string, error)
+	GetRemoteViewHistory(agentID string) ([]map[string]interface{}, error)
 }
 
 type CommandServiceImpl struct {
@@ -241,6 +245,86 @@ func (s *CommandServiceImpl) addToCommandHistory(agentID string, cmd constant.Qu
 	}
 
 	return nil
+}
+
+// Get the Redis key for storing remote view data
+func getRemoteViewKey(agentID string) string {
+	return fmt.Sprintf("agent:%s:remote_view", agentID)
+}
+
+// StoreRemoteViewData stores the HTML and metadata from a remote view in Redis
+func (s *CommandServiceImpl) StoreRemoteViewData(agentID string, result string) error {
+	ctx := context.Background()
+	key := getRemoteViewKey(agentID)
+
+	// Store the latest result
+	err := s.redisClient.Set(ctx, key, result, 24*time.Hour).Err() // Expire after 24 hours
+	if err != nil {
+		return fmt.Errorf("failed to store remote view data: %w", err)
+	}
+
+	// Also add to a history list with timestamp
+	historyEntry := map[string]interface{}{
+		"timestamp": time.Now().Format(time.RFC3339),
+		"data":      result,
+	}
+
+	historyJSON, err := json.Marshal(historyEntry)
+	if err != nil {
+		return fmt.Errorf("failed to marshal history entry: %w", err)
+	}
+
+	historyKey := key + ":history"
+	err = s.redisClient.LPush(ctx, historyKey, string(historyJSON)).Err()
+	if err != nil {
+		return fmt.Errorf("failed to store remote view history: %w", err)
+	}
+
+	// Keep only the last 10 snapshots
+	err = s.redisClient.LTrim(ctx, historyKey, 0, 9).Err()
+	if err != nil {
+		// Non-critical error, just log it
+		fmt.Printf("Warning: failed to trim remote view history: %v\n", err)
+	}
+
+	return nil
+}
+
+// GetLatestRemoteViewData retrieves the latest remote view data for an agent
+func (s *CommandServiceImpl) GetLatestRemoteViewData(agentID string) (string, error) {
+	ctx := context.Background()
+	key := getRemoteViewKey(agentID)
+
+	data, err := s.redisClient.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return "", fmt.Errorf("no remote view data found for agent %s", agentID)
+	} else if err != nil {
+		return "", fmt.Errorf("failed to get remote view data: %w", err)
+	}
+
+	return data, nil
+}
+
+// GetRemoteViewHistory retrieves the history of remote view data for an agent
+func (s *CommandServiceImpl) GetRemoteViewHistory(agentID string) ([]map[string]interface{}, error) {
+	ctx := context.Background()
+	historyKey := getRemoteViewKey(agentID) + ":history"
+
+	entries, err := s.redisClient.LRange(ctx, historyKey, 0, -1).Result()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get remote view history: %w", err)
+	}
+
+	history := make([]map[string]interface{}, 0, len(entries))
+	for _, entry := range entries {
+		var item map[string]interface{}
+		if err := json.Unmarshal([]byte(entry), &item); err != nil {
+			continue // Skip invalid entries
+		}
+		history = append(history, item)
+	}
+
+	return history, nil
 }
 
 // Constructor

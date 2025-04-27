@@ -1,3 +1,4 @@
+agent\test\index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -111,6 +112,40 @@
             background-color: rgba(255, 68, 68, 0.2);
             color: #ff4444;
         }
+        textarea {
+            width: 100%;
+            height: 120px;
+            background: #333;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+        .content-preview {
+            margin-top: 15px;
+            padding: 15px;
+            border: 1px dashed #00aaff;
+            border-radius: 4px;
+            background-color: #1a1a1a;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .tab {
+            padding: 8px 16px;
+            background-color: #333;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+            cursor: pointer;
+        }
+        .tab.active {
+            background-color: #00aaff;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -133,6 +168,42 @@
             <div class="form-group">
                 <label for="server-url">C2 Server URL:</label>
                 <input type="text" id="server-url" value="ws://localhost:8080/ws" style="width: 100%; padding: 8px; margin-top: 5px; background: #333; color: white; border: 1px solid #444; border-radius: 4px;">
+            </div>
+        </div>
+        
+        <!-- New Content Modification Card -->
+        <div class="card">
+            <h3>Content Modification</h3>
+            <div class="tabs">
+                <div class="tab active" data-tab="html">HTML</div>
+                <div class="tab" data-tab="text">Plain Text</div>
+                <div class="tab" data-tab="form">Form Elements</div>
+            </div>
+            
+            <div class="tab-content" id="html-content">
+                <textarea id="html-input" placeholder="Enter HTML content here...">&lt;h2&gt;Test Content&lt;/h2&gt;
+&lt;p&gt;This is sample content for the remote view test.&lt;/p&gt;
+&lt;p&gt;You can modify this to see how it appears in the remote view.&lt;/p&gt;</textarea>
+                <button id="apply-html">Apply HTML</button>
+            </div>
+            
+            <div class="tab-content" id="text-content" style="display: none;">
+                <textarea id="text-input" placeholder="Enter plain text content here...">Sample text for testing
+Line 1
+Line 2
+Line 3</textarea>
+                <button id="apply-text">Apply Text</button>
+            </div>
+            
+            <div class="tab-content" id="form-content" style="display: none;">
+                <button id="add-form">Add Login Form</button>
+                <button id="add-credit-card">Add Credit Card Form</button>
+                <button id="add-search">Add Search Box</button>
+            </div>
+            
+            <div class="content-preview" id="content-target">
+                <!-- Content will be inserted here -->
+                <p>Content preview will appear here after you apply changes.</p>
             </div>
         </div>
         
@@ -266,6 +337,116 @@
         document.getElementById('clear-console').addEventListener('click', function() {
             consoleElement.innerHTML = '';
             addLogEntry('Console cleared', 'info');
+        });
+        
+        // Tab switching functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Remove active class from all tabs
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                // Add active class to clicked tab
+                this.classList.add('active');
+                
+                // Hide all tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.style.display = 'none';
+                });
+                
+                // Show selected tab content
+                const tabName = this.getAttribute('data-tab');
+                document.getElementById(`${tabName}-content`).style.display = 'block';
+            });
+        });
+        
+        // Apply HTML content
+        document.getElementById('apply-html').addEventListener('click', function() {
+            const htmlContent = document.getElementById('html-input').value;
+            document.getElementById('content-target').innerHTML = htmlContent;
+            addLogEntry('Applied HTML content', 'success');
+        });
+        
+        // Apply plain text content
+        document.getElementById('apply-text').addEventListener('click', function() {
+            const textContent = document.getElementById('text-input').value;
+            document.getElementById('content-target').innerText = textContent;
+            addLogEntry('Applied text content', 'success');
+        });
+        
+        // Add login form
+        document.getElementById('add-form').addEventListener('click', function() {
+            const loginForm = `
+                <form id="login-form" class="test-form">
+                    <h3>Login Form</h3>
+                    <div style="margin-bottom: 15px;">
+                        <label for="username">Username:</label>
+                        <input type="text" id="username" name="username" placeholder="Enter username" style="width: 100%; padding: 8px; margin-top: 5px; background: #fff; color: #333; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" name="password" placeholder="Enter password" style="width: 100%; padding: 8px; margin-top: 5px; background: #fff; color: #333; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div>
+                        <button type="button" style="background-color: #4CAF50; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer;">Login</button>
+                    </div>
+                </form>
+            `;
+            document.getElementById('content-target').innerHTML = loginForm;
+            addLogEntry('Added login form', 'success');
+        });
+        
+        // Add credit card form
+        document.getElementById('add-credit-card').addEventListener('click', function() {
+            const ccForm = `
+                <form id="payment-form" class="test-form">
+                    <h3>Payment Information</h3>
+                    <div style="margin-bottom: 15px;">
+                        <label for="card-number">Card Number:</label>
+                        <input type="text" id="card-number" name="card-number" placeholder="1234 5678 9012 3456" style="width: 100%; padding: 8px; margin-top: 5px; background: #fff; color: #333; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div style="flex: 1;">
+                            <label for="expiry">Expiry Date:</label>
+                            <input type="text" id="expiry" name="expiry" placeholder="MM/YY" style="width: 100%; padding: 8px; margin-top: 5px; background: #fff; color: #333; border: 1px solid #ccc; border-radius: 4px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label for="cvv">CVV:</label>
+                            <input type="text" id="cvv" name="cvv" placeholder="123" style="width: 100%; padding: 8px; margin-top: 5px; background: #fff; color: #333; border: 1px solid #ccc; border-radius: 4px;">
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label for="name">Cardholder Name:</label>
+                        <input type="text" id="name" name="name" placeholder="John Doe" style="width: 100%; padding: 8px; margin-top: 5px; background: #fff; color: #333; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div>
+                        <button type="button" style="background-color: #4CAF50; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer;">Pay Now</button>
+                    </div>
+                </form>
+            `;
+            document.getElementById('content-target').innerHTML = ccForm;
+            addLogEntry('Added credit card form', 'success');
+        });
+        
+        // Add search box
+        document.getElementById('add-search').addEventListener('click', function() {
+            const searchBox = `
+                <div class="search-container" style="max-width: 500px; margin: 20px auto;">
+                    <h3>Search</h3>
+                    <div style="display: flex; margin-bottom: 15px;">
+                        <input type="text" placeholder="Search for anything..." style="flex: 1; padding: 10px; background: #fff; color: #333; border: 1px solid #ccc; border-radius: 4px 0 0 4px;">
+                        <button type="button" style="background-color: #4CAF50; color: white; padding: 10px 15px; border: none; border-radius: 0 4px 4px 0; cursor: pointer;">Search</button>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <label style="display: flex; align-items: center;">
+                            <input type="checkbox" style="margin-right: 5px;"> Search in titles
+                        </label>
+                        <label style="display: flex; align-items: center;">
+                            <input type="checkbox" style="margin-right: 5px;"> Search in descriptions
+                        </label>
+                    </div>
+                </div>
+            `;
+            document.getElementById('content-target').innerHTML = searchBox;
+            addLogEntry('Added search box', 'success');
         });
         
         // Initial log
