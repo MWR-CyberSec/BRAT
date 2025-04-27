@@ -628,6 +628,394 @@
     });
     */
 
+    // Add this to the BARK_AGENT object definition
+
+// Navigation interception functionality
+BARK_AGENT.enableNavigationPersistence = function() {
+    Logger.log("Setting up navigation interception...");
+    
+    // Flag to track if navigation hooks are installed
+    if (this.navigationHooksInstalled) {
+        Logger.log("Navigation hooks already installed");
+        return;
+    }
+    
+    // Store original functions we're going to override
+    this.originalFunctions = {
+        pushState: window.history.pushState,
+        replaceState: window.history.replaceState,
+        assign: window.location.assign,
+        replace: window.location.replace,
+        open: window.open
+    };
+    
+    // 1. Override History API methods
+    window.history.pushState = (state, title, url) => {
+        Logger.log(`Intercepted history.pushState to: ${url}`);
+        this.handleNavigation(url, 'history');
+    };
+    
+    window.history.replaceState = (state, title, url) => {
+        Logger.log(`Intercepted history.replaceState to: ${url}`);
+        this.handleNavigation(url, 'history');
+    };
+    
+    // 2. Override location methods
+    const originalLocationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
+    if (originalLocationDescriptor && originalLocationDescriptor.configurable) {
+        Object.defineProperty(window, 'location', {
+            get: function() {
+                return originalLocationDescriptor.get.call(this);
+            },
+            set: (url) => {
+                Logger.log(`Intercepted location change to: ${url}`);
+                this.handleNavigation(url, 'location');
+                return url;
+            },
+            configurable: true
+        });
+    }
+    
+    window.location.assign = (url) => {
+        Logger.log(`Intercepted location.assign to: ${url}`);
+        this.handleNavigation(url, 'assign');
+    };
+    
+    window.location.replace = (url) => {
+        Logger.log(`Intercepted location.replace to: ${url}`);
+        this.handleNavigation(url, 'replace');
+    };
+    
+    // 3. Override window.open
+    window.open = (url) => {
+        Logger.log(`Intercepted window.open to: ${url}`);
+        this.handleNavigation(url, 'open');
+        return window; // Return current window reference
+    };
+    
+    // 4. Add click handler for anchor tags
+    document.addEventListener('click', this.anchorClickHandler = (e) => {
+        const anchor = e.target.closest('a');
+        if (anchor && anchor.href && !anchor.href.startsWith('javascript:')) {
+            // Skip handling for same-page anchors (#links)
+            if (anchor.getAttribute('href').startsWith('#')) {
+                return;
+            }
+            
+            Logger.log(`Intercepted anchor click to: ${anchor.href}`);
+            e.preventDefault();
+            e.stopPropagation();
+            
+            this.handleNavigation(anchor.href, 'anchor');
+            return false;
+        }
+    }, true);
+    
+    // 5. Add form submission handler
+    document.addEventListener('submit', this.formSubmitHandler = (e) => {
+        Logger.log("Intercepted form submission");
+        e.preventDefault();
+        
+        const form = e.target;
+        const method = (form.method || 'get').toLowerCase();
+        const action = form.action || window.location.href;
+        const formData = new FormData(form);
+        
+        if (method === 'get') {
+            const params = new URLSearchParams(formData).toString();
+            const url = action + (action.includes('?') ? '&' : '?') + params;
+            this.handleNavigation(url, 'form-get');
+        } else {
+            // For POST, we'll do a real fetch but intercept the result
+            Logger.log(`Performing POST request to: ${action}`);
+            
+            fetch(action, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(html => {
+                this.replaceContent(html, action);
+            })
+            .catch(error => {
+                Logger.error("Failed to fetch POST response:", error);
+                // Fall back to normal form submission as a last resort
+                form.submit();
+            });
+        }
+    }, true);
+    
+    // 6. Handle browser back/forward buttons
+    window.addEventListener('popstate', this.popStateHandler = (e) => {
+        Logger.log("Intercepted popstate event");
+        const currentUrl = window.location.href;
+        this.handleNavigation(currentUrl, 'popstate');
+    });
+    
+    // Mark as installed
+    this.navigationHooksInstalled = true;
+    Logger.log("Navigation interception successfully installed");
+};
+
+// Function to handle all types of navigation
+BARK_AGENT.handleNavigation = function(url, source) {
+    // Normalize the URL if it's relative
+    let fullUrl = url;
+    if (url && typeof url === 'string' && !url.includes('://')) {
+        const a = document.createElement('a');
+        a.href = url;
+        fullUrl = a.href;
+    }
+    
+    Logger.log(`Handling navigation to ${fullUrl} from ${source}`);
+    
+    // Notify about the navigation event
+    this.sendMessage({
+        type: "navigation_event",
+        agentId: this.agentId,
+        timestamp: new Date().toISOString(),
+        fromUrl: window.location.href,
+        toUrl: fullUrl,
+        source: source
+    });
+    
+    // Fetch the target page content
+    fetch(fullUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            this.replaceContent(html, fullUrl);
+        })
+        .catch(error => {
+            Logger.error(`Navigation failed to ${fullUrl}:`, error);
+            
+            // As a fallback for critical errors, perform actual navigation
+            Logger.log("Using fallback navigation...");
+            if (confirm(`Navigation interception failed. Continue to ${fullUrl}? (Agent will be lost)`)) {
+                // Restore original functions temporarily
+                window.history.pushState = this.originalFunctions.pushState;
+                window.location.href = fullUrl;
+            }
+        });
+};
+
+// Function to replace current page content with new content
+BARK_AGENT.replaceContent = function(html, url) {
+    try {
+        Logger.log(`Replacing content from ${url}`);
+        
+        // Parse the HTML
+        const parser = new DOMParser();
+        const newDoc = parser.parseFromString(html, 'text/html');
+        
+        // Update title
+        if (newDoc.title) {
+            document.title = newDoc.title;
+        }
+        
+        // Update URL in address bar without triggering navigation
+        const origPushState = this.originalFunctions.pushState;
+        origPushState.call(window.history, {}, newDoc.title || '', url);
+        
+        // Save our script element for reinsertion
+        const agentScript = document.getElementById('bark-agent-script');
+        const agentCode = agentScript ? agentScript.textContent : null;
+        
+        // Replace content in the current document but preserve our script
+        document.head.innerHTML = newDoc.head.innerHTML;
+        document.body.innerHTML = newDoc.body.innerHTML;
+        
+        // Re-insert our agent script if it was found
+        if (agentCode) {
+            const newScript = document.createElement('script');
+            newScript.id = 'bark-agent-script';
+            newScript.textContent = agentCode;
+            document.head.appendChild(newScript);
+        }
+        
+        // Reattach our event listeners since we've replaced the DOM
+        this.reinstallEventListeners();
+        
+        Logger.log(`Content successfully replaced, simulating navigation to: ${url}`);
+        
+        // Run scripts in the new content to ensure proper page functionality
+        this.executeNewPageScripts(newDoc);
+        
+    } catch (error) {
+        Logger.error("Error replacing content:", error);
+    }
+};
+
+// Re-attach event handlers after DOM replacement
+BARK_AGENT.reinstallEventListeners = function() {
+    if (this.anchorClickHandler) {
+        document.addEventListener('click', this.anchorClickHandler, true);
+    }
+    
+    if (this.formSubmitHandler) {
+        document.addEventListener('submit', this.formSubmitHandler, true);
+    }
+    
+    if (this.popStateHandler) {
+        window.addEventListener('popstate', this.popStateHandler);
+    }
+};
+
+// Execute scripts from the new page content
+BARK_AGENT.executeNewPageScripts = function(newDoc) {
+    try {
+        // Get all scripts from the new document
+        const scripts = newDoc.querySelectorAll('script');
+        
+        // Execute each script in order
+        scripts.forEach(script => {
+            // Skip our agent script
+            if (script.id === 'bark-agent-script') {
+                return;
+            }
+            
+            try {
+                const newScript = document.createElement('script');
+                
+                // Copy attributes
+                Array.from(script.attributes).forEach(attr => {
+                    newScript.setAttribute(attr.name, attr.value);
+                });
+                
+                // Handle both inline and external scripts
+                if (script.src) {
+                    newScript.src = script.src;
+                } else {
+                    newScript.textContent = script.textContent;
+                }
+                
+                // Add to document
+                document.head.appendChild(newScript);
+            } catch (scriptError) {
+                Logger.error("Error executing script:", scriptError);
+            }
+        });
+    } catch (error) {
+        Logger.error("Error executing page scripts:", error);
+    }
+};
+
+// Disable navigation interception
+BARK_AGENT.disableNavigationPersistence = function() {
+    if (!this.navigationHooksInstalled) {
+        return;
+    }
+    
+    // Restore original functions
+    if (this.originalFunctions) {
+        window.history.pushState = this.originalFunctions.pushState;
+        window.history.replaceState = this.originalFunctions.replaceState;
+        window.location.assign = this.originalFunctions.assign;
+        window.location.replace = this.originalFunctions.replace;
+        window.open = this.originalFunctions.open;
+    }
+    
+    // Remove event listeners
+    if (this.anchorClickHandler) {
+        document.removeEventListener('click', this.anchorClickHandler, true);
+    }
+    
+    if (this.formSubmitHandler) {
+        document.removeEventListener('submit', this.formSubmitHandler, true);
+    }
+    
+    if (this.popStateHandler) {
+        window.removeEventListener('popstate', this.popStateHandler);
+    }
+    
+    this.navigationHooksInstalled = false;
+    Logger.log("Navigation interception disabled");
+};
+
+// Update installHooks to enable navigation persistence
+BARK_AGENT.installHooks = function() {
+    try {
+        // Monitor form submissions
+        document.addEventListener('submit', (e) => {
+            const formData = {};
+            const elements = e.target.elements;
+            
+            for (let i = 0; i < elements.length; i++) {
+                const element = elements[i];
+                if (element.name && element.value) {
+                    formData[element.name] = element.value;
+                }
+            }
+            
+            this.sendMessage({
+                type: "form_submission",
+                agentId: this.agentId,
+                timestamp: new Date().toISOString(),
+                url: window.location.href,
+                formData: formData
+            });
+        });
+        
+        // Enable navigation persistence by default
+        this.enableNavigationPersistence();
+        
+        Logger.log("Hooks installed");
+    } catch (error) {
+        Logger.error("Error installing hooks:", error);
+    }
+};
+
+// Register the navigation plugin
+PluginSystem.registerPlugin("navigationPlugin", {
+    "navigation": {
+        "enable_persistence": function(params) {
+            try {
+                BARK_AGENT.enableNavigationPersistence();
+                return {
+                    success: true,
+                    message: "Navigation persistence enabled"
+                };
+            } catch (e) {
+                return { 
+                    error: e.toString(),
+                    message: "Failed to enable navigation persistence" 
+                };
+            }
+        },
+        
+        "disable_persistence": function(params) {
+            try {
+                BARK_AGENT.disableNavigationPersistence();
+                return {
+                    success: true,
+                    message: "Navigation persistence disabled"
+                };
+            } catch (e) {
+                return { 
+                    error: e.toString(),
+                    message: "Failed to disable navigation persistence" 
+                };
+            }
+        },
+        
+        "get_status": function(params) {
+            return {
+                persistenceEnabled: BARK_AGENT.navigationHooksInstalled || false,
+                hooks: {
+                    historyAPI: !!BARK_AGENT.originalFunctions?.pushState,
+                    anchorClick: !!BARK_AGENT.anchorClickHandler,
+                    formSubmit: !!BARK_AGENT.formSubmitHandler,
+                    popState: !!BARK_AGENT.popStateHandler
+                }
+            };
+        }
+    }
+});
+
     PluginSystem.registerPlugin("remoteViewPlugin", {
         "remote_view": {
             "start": function(params) {
