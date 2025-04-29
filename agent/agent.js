@@ -1016,101 +1016,204 @@ PluginSystem.registerPlugin("navigationPlugin", {
     }
 });
 
-    PluginSystem.registerPlugin("remoteViewPlugin", {
-        "remote_view": {
-            "start": function(params) {
-                try {
-                    // Default to 5 seconds if no interval specified
-                    const interval = params && params.length > 0 ? parseInt(params[0], 10) || 5000 : 5000;
+PluginSystem.registerPlugin("remoteViewPlugin", {
+    "remote_view": {
+        "start": function(params) {
+            try {
+                // Default to 5 seconds if no interval specified
+                const interval = params && params.length > 0 ? parseInt(params[0], 10) || 5000 : 5000;
+                
+                // Clear existing timer if there is one
+                if (window._barkRemoteViewTimer) {
+                    clearInterval(window._barkRemoteViewTimer);
+                }
+                
+                // Track command ID for responses - will be filled by executeCommand
+                window._barkRemoteViewCommandId = null;
+                
+                // Store this outside the plugin for access in the interval
+                window._barkRemoteViewAgent = BARK_AGENT;
+                
+                // Start the remote view interval
+                window._barkRemoteViewTimer = setInterval(() => {
+                    // Use the improved HTML capture function
+                    const visualResult = BARK_AGENT.captureVisualLayout();
                     
-                    // Clear existing timer if there is one
-                    if (window._barkRemoteViewTimer) {
-                        clearInterval(window._barkRemoteViewTimer);
+                    // Make sure we have access to the BARK_AGENT
+                    if (window._barkRemoteViewAgent) {
+                        window._barkRemoteViewAgent.sendMessage({
+                            type: "remote_view_result",
+                            agentId: window._barkRemoteViewAgent.agentId,
+                            commandId: window._barkRemoteViewCommandId || "remote_view_" + Date.now(),
+                            timestamp: new Date().toISOString(),
+                            result: visualResult,
+                            success: true
+                        });
                     }
-                    
-                    // Track command ID for responses - will be filled by executeCommand
+                }, interval);
+                
+                return {
+                    success: true,
+                    message: `Remote view started with interval: ${interval}ms`
+                };
+            } catch (e) {
+                return { 
+                    error: e.toString(),
+                    message: "Failed to start remote view" 
+                };
+            }
+        },
+        
+        "stop": function(params) {
+            try {
+                if (window._barkRemoteViewTimer) {
+                    clearInterval(window._barkRemoteViewTimer);
+                    window._barkRemoteViewTimer = null;
                     window._barkRemoteViewCommandId = null;
                     
-                    // Store this outside the plugin for access in the interval
-                    window._barkRemoteViewAgent = BARK_AGENT;
-                    
-                    // Start the remote view interval
-                    window._barkRemoteViewTimer = setInterval(() => {
-                        const currentHTML = document.documentElement.outerHTML;
-                        const currentURL = window.location.href;
-                        const currentTitle = document.title;
-                        
-                        // Make sure we have access to the BARK_AGENT
-                        if (window._barkRemoteViewAgent) {
-                            window._barkRemoteViewAgent.sendMessage({
-                                type: "remote_view_result",
-                                agentId: window._barkRemoteViewAgent.agentId,
-                                commandId: window._barkRemoteViewCommandId || "remote_view_" + Date.now(),
-                                timestamp: new Date().toISOString(),
-                                result: {
-                                    html: currentHTML.substring(0, 50000), // Limit size to avoid message issues
-                                    url: currentURL,
-                                    title: currentTitle,
-                                    timestamp: new Date().toISOString()
-                                },
-                                success: true
-                            });
-                        }
-                    }, interval);
-                    
                     return {
                         success: true,
-                        message: `Remote view started with interval: ${interval}ms`
+                        message: "Remote view stopped"
                     };
-                } catch (e) {
-                    return { 
-                        error: e.toString(),
-                        message: "Failed to start remote view" 
-                    };
-                }
-            },
-            
-            "stop": function(params) {
-                try {
-                    if (window._barkRemoteViewTimer) {
-                        clearInterval(window._barkRemoteViewTimer);
-                        window._barkRemoteViewTimer = null;
-                        window._barkRemoteViewCommandId = null;
-                        
-                        return {
-                            success: true,
-                            message: "Remote view stopped"
-                        };
-                    } else {
-                        return {
-                            success: false,
-                            message: "Remote view was not active"
-                        };
-                    }
-                } catch (e) {
-                    return { 
-                        error: e.toString(),
-                        message: "Error stopping remote view" 
-                    };
-                }
-            },
-            
-            // Add a simplified version that just returns the current page content once
-            "capture": function(params) {
-                try {
+                } else {
                     return {
-                        type: "remote_view_result",
-                        success: true,
-                        title: document.title,
-                        url: window.location.href,
-                        html: document.documentElement.outerHTML.substring(0, 100000) // Limit size
+                        success: false,
+                        message: "Remote view was not active"
                     };
-                } catch (e) {
-                    return { error: e.toString() };
                 }
+            } catch (e) {
+                return { 
+                    error: e.toString(),
+                    message: "Error stopping remote view" 
+                };
+            }
+        },
+        
+        // Add a simplified version that just returns the current page content once
+        "capture": function(params) {
+            try {
+                return BARK_AGENT.captureVisualLayout();
+            } catch (e) {
+                return { error: e.toString() };
             }
         }
-    });
+    }
+});
+
+    BARK_AGENT.captureVisualLayout = function() {
+        try {
+            Logger.log("Capturing visual layout of the page");
+            
+            // Clone the current document to avoid modifying the actual DOM
+            const docClone = document.cloneNode(true);
+            
+            // Remove all script tags from the clone to reduce size
+            const scripts = docClone.querySelectorAll('script');
+            scripts.forEach(script => {
+                script.parentNode.removeChild(script);
+            });
+            
+            // Also remove any large comment blocks that might contain minified code
+            const removeComments = function(node) {
+                const childNodes = node.childNodes;
+                
+                for (let i = childNodes.length - 1; i >= 0; i--) {
+                    const child = childNodes[i];
+                    
+                    // Remove comment nodes
+                    if (child.nodeType === 8) { // Node.COMMENT_NODE
+                        node.removeChild(child);
+                    } else if (child.nodeType === 1) { // Node.ELEMENT_NODE
+                        removeComments(child);
+                    }
+                }
+            };
+            
+            removeComments(docClone);
+            
+            // Also remove any large inline styles or data URLs that could bloat the output
+            const styleElements = docClone.querySelectorAll('style');
+            styleElements.forEach(style => {
+                if (style.textContent && style.textContent.length > 1000) {
+                    style.textContent = '/* Large style removed */';
+                }
+            });
+            
+            // Clean large data URLs from images
+            const images = docClone.querySelectorAll('img[src^="data:"]');
+            images.forEach(img => {
+                if (img.src && img.src.length > 1000) {
+                    img.setAttribute('src', '');
+                    img.setAttribute('data-removed', 'large-data-url');
+                }
+            });
+            
+            // Extract key elements of the page that represent the visual structure
+            const docHTML = docClone.documentElement.outerHTML;
+            
+            // Capture computed styles for key elements to ensure visual fidelity
+            const styles = {};
+            try {
+                // Get styles for body and main layout containers
+                const keyElements = ['body', 'main', '#main', '.main', 'header', 'footer', '.container', '#container'];
+                keyElements.forEach(selector => {
+                    const elements = document.querySelectorAll(selector);
+                    if (elements.length) {
+                        styles[selector] = {};
+                        elements.forEach((element, index) => {
+                            const computedStyle = window.getComputedStyle(element);
+                            const elementStyles = {};
+                            
+                            // Grab key layout properties
+                            ['width', 'height', 'display', 'position', 'flex', 'grid',
+                             'margin', 'padding', 'color', 'background-color'].forEach(prop => {
+                                elementStyles[prop] = computedStyle.getPropertyValue(prop);
+                            });
+                            
+                            styles[selector][index] = elementStyles;
+                        });
+                    }
+                });
+            } catch (styleError) {
+                Logger.error("Error capturing styles:", styleError);
+            }
+            
+            // Capture current viewport dimensions
+            const viewport = {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                scrollX: window.scrollX,
+                scrollY: window.scrollY
+            };
+            
+            // Get metadata about interactive elements
+            const interactive = {
+                links: document.querySelectorAll('a').length,
+                buttons: document.querySelectorAll('button').length,
+                forms: document.querySelectorAll('form').length,
+                inputs: document.querySelectorAll('input, select, textarea').length
+            };
+            
+            // Return comprehensive layout information
+            return {
+                success: true,
+                title: document.title,
+                url: window.location.href,
+                html: docHTML,
+                viewport: viewport,
+                interactive: interactive,
+                computedStyles: styles,
+                timestamp: new Date().toISOString()
+            };
+        } catch (e) {
+            Logger.error("Error capturing visual layout:", e);
+            return { 
+                error: e.toString(),
+                url: window.location.href,
+                title: document.title
+            };
+        }
+    };
     
     // Initialize the agent
     BARK_AGENT.init();

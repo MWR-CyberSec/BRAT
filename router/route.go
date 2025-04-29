@@ -366,6 +366,7 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 					resultBytes, err := json.Marshal(result)
 					if err == nil {
 						resultStr = string(resultBytes)
+						println("Remote view result:", resultStr)
 					} else {
 						println("Error marshaling result:", err.Error(), resultStr)
 						continue
