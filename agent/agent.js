@@ -1046,6 +1046,21 @@ PluginSystem.registerPlugin("navigationPlugin", {
     }
 });
 
+function loadPako() {
+    return new Promise((resolve, reject) => {
+        if (window.pako) {
+            resolve(window.pako);
+            return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js';
+        script.onload = () => resolve(window.pako);
+        script.onerror = () => reject(new Error('Failed to load pako library'));
+        document.head.appendChild(script);
+    });
+}
+
 // Fixed Remote View Plugin for proper command tracking with remote_view_result type
 PluginSystem.registerPlugin("remoteViewPlugin", {
     "remote_view": {
@@ -1151,10 +1166,27 @@ PluginSystem.registerPlugin("remoteViewPlugin", {
 
 
                     html = docClone.documentElement.outerHTML;
-                    // Limit to 50KB to prevent oversized messages
-                    if (html.length > 50000) {
-                        html = html.substring(0, 50000) + "... [content truncated]";
+                    // compress html using gzip and then base64 encode it 
+                    try{
+                        const compressedBytes = pako.gzip(html);
+
+                        const base64Encoded = btoa(
+                            // Convert the Uint8Array to a binary string
+                            Array.from(new Uint8Array(compressedBytes))
+                                .map(byte => String.fromCharCode(byte))
+                                .join('')
+                        );
+
+                        html = base64Encoded;
+                    } catch (e) {  
+                        const script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js';
+                        script.onload = () => resolve(window.pako);
+                        script.onerror = () => reject(new Error('Failed to load pako library'));
+                        document.head.appendChild(script);
                     }
+                    
+
                 } catch (htmlError) {
                     Logger.error("Error capturing HTML:", htmlError);
                     html = "<html><body>Error capturing HTML content</body></html>";
