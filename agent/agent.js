@@ -317,7 +317,7 @@
         socket: null,
         config: {
             // Use WebSocket protocol matching the page's protocol (ws or wss)
-            serverUrl: window.location.protocol === 'https:' ? 'wss:' : 'ws:' + '//localhost:8080/ws',
+            serverUrl: 'ws://localhost:8080/ws',
             heartbeatInterval: 5000, // 5 seconds
             reconnectInterval: 30000, // 30 seconds
             maxReconnectAttempts: 5
@@ -406,44 +406,74 @@
             return false;
         },
         
-        // Handle incoming messages from server
-        handleServerMessage: function(event) {
-            try {
-                const message = JSON.parse(event.data);
-                Logger.log(`Received message type: ${message.type}`);
+        // Update the handleServerMessage function in BARK_AGENT to store current command ID
+handleServerMessage: function(event) {
+    try {
+        const message = JSON.parse(event.data);
+        Logger.log(`Received message type: ${message.type}`);
+        
+        switch (message.type) {
+            case "command":
+                Logger.log(`Command received: ${message.command}`);
                 
-                switch (message.type) {
-                    case "command":
-                        Logger.log(`Command received: ${message.command}`);
-                        
-                        // Make sure the command structure exists
-                        if (message.command && message.command.id && message.command.action) {
-                            this.executeCommand(message.command);
-                        } else {
-                            Logger.error("Invalid command structure:", message.command);
-                        }
-                        break;
-                    case "config_update":
-                        this.updateConfig(message.config);
-                        break;
-                    case "pong":
-                        // Simple acknowledgment of heartbeat
-                        Logger.log("Received pong from server");
-                        break;
-                    case "plugin_install":
-                        // Handle plugin installation
-                        if (message.plugin && message.plugin.name && message.plugin.code) {
-                            this.installPlugin(message.plugin);
-                        }
-                        break;
-                    default:
-                        Logger.log(`Unhandled message type: ${message.type}`);
+                // Store the current command ID for reference by plugins
+                if (message.command && message.command.id) {
+                    window._barkCurrentCommandId = message.command.id;
                 }
-            } catch (error) {
-                Logger.error("Error processing message:", error);
-                Logger.debug("Raw data:", event.data);
-            }
-        },
+                
+                // Make sure the command structure exists
+                if (message.command && message.command.id && message.command.action) {
+                    // Check for remote view command specifically
+                    if (message.command.action.startsWith("remote_view.")) {
+                        const parts = message.command.action.split('.');
+                        const remoteViewCmd = parts[1]; // "start", "stop", or "capture"
+                        const params = parts.length > 2 ? parts.slice(2) : [];
+                        
+                        if (CommandRegistry.modules.remote_view && 
+                            CommandRegistry.modules.remote_view[remoteViewCmd]) {
+                            
+                            // Execute the command directly
+                            const result = CommandRegistry.modules.remote_view[remoteViewCmd](params);
+                            
+                            // Send the initial command acknowledgment
+                            this.sendMessage({
+                                type: "command_result",
+                                agentId: this.agentId,
+                                commandId: message.command.id,
+                                timestamp: new Date().toISOString(),
+                                result: result,
+                                success: !result.error
+                            });
+                            return;
+                        }
+                    }
+                    
+                    this.executeCommand(message.command);
+                } else {
+                    Logger.error("Invalid command structure:", message.command);
+                }
+                break;
+                
+            // Handle other message types...
+            case "config_update":
+                this.updateConfig(message.config);
+                break;
+            case "pong":
+                Logger.log("Received pong from server");
+                break;
+            case "plugin_install":
+                if (message.plugin && message.plugin.name && message.plugin.code) {
+                    this.installPlugin(message.plugin);
+                }
+                break;
+            default:
+                Logger.log(`Unhandled message type: ${message.type}`);
+        }
+    } catch (error) {
+        Logger.error("Error processing message:", error);
+        Logger.debug("Raw data:", event.data);
+    }
+},
 
         // Install a plugin
         installPlugin: function(plugin) {
@@ -1016,8 +1046,138 @@ PluginSystem.registerPlugin("navigationPlugin", {
     }
 });
 
+// Fixed Remote View Plugin for proper command tracking with remote_view_result type
 PluginSystem.registerPlugin("remoteViewPlugin", {
     "remote_view": {
+        // Helper function to capture DOM while avoiding agent script
+        _captureDOM: function() {
+            try {
+                // Create a safe clone of the document to work with
+                const docClone = document.cloneNode(true);
+                
+                // Remove all script tags to reduce size and prevent sending our agent code
+                const scripts = docClone.querySelectorAll('script');
+                scripts.forEach(script => {
+                    if (script.parentNode) {
+                        script.parentNode.removeChild(script);
+                    }
+                });
+                
+                const styleLinks = docClone.querySelectorAll('link[rel="stylesheet"]');
+                styleLinks.forEach(link => {
+                    const href = link.getAttribute('href');
+                    if (href) {
+                        // very crude check to see if its not already a url
+                        if (!href.includes('http')) {
+
+                            try {
+                                const absoluteUrl = new URL(href, window.location.href).href;
+                                link.setAttribute('href', absoluteUrl);
+                                Logger.debug(`Converted relative URL to absolute URL: ${absoluteUrl}`);
+                            } catch (e) {
+                                Logger.error(`Failed to convert URL: ${href}`, e);
+                            }
+                        }
+                    }
+                });
+
+                const images = docClone.querySelectorAll('img');
+                images.forEach(img => {
+                    const src = img.getAttribute('src');
+                    if (src && !src.match(/^(https?:)?\/\//) && !src.startsWith('data:')) {
+                        // Convert relative URL to absolute URL
+                        const absoluteUrl = new URL(src, window.location.href).href;
+                        img.setAttribute('src', absoluteUrl);
+                    }
+                });
+                
+                // Get viewport information
+                const viewport = {
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                    scrollX: window.scrollX,
+                    scrollY: window.scrollY
+                };
+                
+                // Get computed styles for important elements (limited set)
+                const computedStyles = {};
+                try {
+                    ['body', '.container', 'header', 'footer', 'main'].forEach(selector => {
+                        const elements = document.querySelectorAll(selector);
+                        if (elements.length > 0) {
+                            computedStyles[selector] = {};
+                            const style = window.getComputedStyle(elements[0]);
+                            ['background-color', 'color', 'width', 'height'].forEach(prop => {
+                                computedStyles[selector][prop] = style.getPropertyValue(prop);
+                            });
+                        }
+                    });
+                } catch (e) {
+                    Logger.error("Error capturing styles:", e);
+                }
+                
+                // Get HTML content, but limit its size
+                let html = "";
+                try {
+
+                    const styleElements = docClone.querySelectorAll('style');
+                    styleElements.forEach(styleEl => {
+                        if (styleEl.textContent) {
+                            // Replace relative URLs in @import statements with absolute URLs
+                            styleEl.textContent = styleEl.textContent.replace(
+                                /@import\s+url\(['"]?([^'")]+)['"]?\)/g,
+                                (match, url) => {
+                                    if (!url.match(/^(https?:)?\/\//)) {
+                                        const absoluteUrl = new URL(url, window.location.href).href;
+                                        return `@import url('${absoluteUrl}')`;
+                                    }
+                                    return match;
+                                }
+                            );
+                            
+                            // Fix relative URLs in url() references
+                            styleEl.textContent = styleEl.textContent.replace(
+                                /url\(['"]?([^'")]+)['"]?\)/g,
+                                (match, url) => {
+                                    if (!url.match(/^(https?:)?\/\//) && !url.startsWith('data:')) {
+                                        const absoluteUrl = new URL(url, window.location.href).href;
+                                        return `url('${absoluteUrl}')`;
+                                    }
+                                    return match;
+                                }
+                            );
+                        }
+                    });
+
+
+                    html = docClone.documentElement.outerHTML;
+                    // Limit to 50KB to prevent oversized messages
+                    if (html.length > 50000) {
+                        html = html.substring(0, 50000) + "... [content truncated]";
+                    }
+                } catch (htmlError) {
+                    Logger.error("Error capturing HTML:", htmlError);
+                    html = "<html><body>Error capturing HTML content</body></html>";
+                }
+                
+                return {
+                    type: "remote_view_data",
+                    title: document.title,
+                    url: window.location.href,
+                    html: html,
+                    viewport: viewport,
+                    computedStyles: computedStyles,
+                    timestamp: new Date().toISOString()
+                };
+            } catch (e) {
+                return { 
+                    error: e.toString(),
+                    url: window.location.href,
+                    title: document.title || "Unknown"
+                };
+            }
+        },
+        
         "start": function(params) {
             try {
                 // Default to 5 seconds if no interval specified
@@ -1028,33 +1188,36 @@ PluginSystem.registerPlugin("remoteViewPlugin", {
                     clearInterval(window._barkRemoteViewTimer);
                 }
                 
-                // Track command ID for responses - will be filled by executeCommand
-                window._barkRemoteViewCommandId = null;
+                // Store the command ID for consistent tracking - IMPORTANT: Use the original command ID
+                window._barkRemoteViewCommandId = window._barkCurrentCommandId || "remote_view_session";
                 
-                // Store this outside the plugin for access in the interval
-                window._barkRemoteViewAgent = BARK_AGENT;
+                // Store the agent reference safely for the interval
+                const agent = BARK_AGENT;
+                const self = this;
                 
                 // Start the remote view interval
                 window._barkRemoteViewTimer = setInterval(() => {
-                    // Use the improved HTML capture function
-                    const visualResult = BARK_AGENT.captureVisualLayout();
-                    
-                    // Make sure we have access to the BARK_AGENT
-                    if (window._barkRemoteViewAgent) {
-                        window._barkRemoteViewAgent.sendMessage({
-                            type: "remote_view_result",
-                            agentId: window._barkRemoteViewAgent.agentId,
-                            commandId: window._barkRemoteViewCommandId || "remote_view_" + Date.now(),
+                    try {
+                        // Capture the current page content
+                        const visualResult = self._captureDOM();
+                        
+                        // Send as a remote_view_result message for special handling in route.go
+                        agent.sendMessage({
+                            type: "remote_view_result", // Changed from command_result to match route.go handling
+                            agentId: agent.agentId,
+                            commandId: window._barkRemoteViewCommandId, // Use the stored command ID
                             timestamp: new Date().toISOString(),
-                            result: visualResult,
-                            success: true
+                            result: visualResult
                         });
+                    } catch (err) {
+                        Logger.error("Error during remote view capture:", err);
                     }
                 }, interval);
                 
                 return {
                     success: true,
-                    message: `Remote view started with interval: ${interval}ms`
+                    message: `Remote view started with interval: ${interval}ms`,
+                    commandId: window._barkRemoteViewCommandId // Include the commandId in the response
                 };
             } catch (e) {
                 return { 
@@ -1069,6 +1232,21 @@ PluginSystem.registerPlugin("remoteViewPlugin", {
                 if (window._barkRemoteViewTimer) {
                     clearInterval(window._barkRemoteViewTimer);
                     window._barkRemoteViewTimer = null;
+                    
+                    // Send a final message indicating the remote view has stopped
+                    BARK_AGENT.sendMessage({
+                        type: "command_result", // Use command_result for final status
+                        agentId: BARK_AGENT.agentId,
+                        commandId: window._barkRemoteViewCommandId || "remote_view_session",
+                        timestamp: new Date().toISOString(),
+                        result: {
+                            type: "remote_view_stopped",
+                            message: "Remote view monitoring stopped",
+                            timestamp: new Date().toISOString()
+                        },
+                        success: true
+                    });
+                    
                     window._barkRemoteViewCommandId = null;
                     
                     return {
@@ -1089,12 +1267,32 @@ PluginSystem.registerPlugin("remoteViewPlugin", {
             }
         },
         
-        // Add a simplified version that just returns the current page content once
         "capture": function(params) {
             try {
-                return BARK_AGENT.captureVisualLayout();
+                // Store the command ID
+                window._barkCurrentCaptureId = window._barkCurrentCommandId || "remote_view_capture";
+                
+                // Capture the current state
+                const captureData = this._captureDOM();
+                
+                // Send using remote_view_result type for special handling
+                BARK_AGENT.sendMessage({
+                    type: "remote_view_result", // Changed to match route.go handling
+                    agentId: BARK_AGENT.agentId,
+                    commandId: window._barkCurrentCaptureId,
+                    timestamp: new Date().toISOString(),
+                    result: captureData
+                });
+                
+                return {
+                    success: true,
+                    message: "Remote view capture sent to server"
+                };
             } catch (e) {
-                return { error: e.toString() };
+                return { 
+                    error: e.toString(),
+                    message: "Error capturing remote view" 
+                };
             }
         }
     }
@@ -1131,22 +1329,6 @@ PluginSystem.registerPlugin("remoteViewPlugin", {
             
             removeComments(docClone);
             
-            // Also remove any large inline styles or data URLs that could bloat the output
-            const styleElements = docClone.querySelectorAll('style');
-            styleElements.forEach(style => {
-                if (style.textContent && style.textContent.length > 1000) {
-                    style.textContent = '/* Large style removed */';
-                }
-            });
-            
-            // Clean large data URLs from images
-            const images = docClone.querySelectorAll('img[src^="data:"]');
-            images.forEach(img => {
-                if (img.src && img.src.length > 1000) {
-                    img.setAttribute('src', '');
-                    img.setAttribute('data-removed', 'large-data-url');
-                }
-            });
             
             // Extract key elements of the page that represent the visual structure
             const docHTML = docClone.documentElement.outerHTML;
