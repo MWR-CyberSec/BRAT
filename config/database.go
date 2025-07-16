@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Et43/BARK/database/dao"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -33,6 +34,14 @@ func InitDB() *gorm.DB {
 	if err != nil {
 		log.Fatalf("Error connecting to database: %v", err)
 	}
+
+	// Auto-migrate the database schema
+	err = db.AutoMigrate(&dao.User{}, &dao.Agent{})
+	if err != nil {
+		log.Fatalf("Error migrating database: %v", err)
+	}
+
+	log.Println("Database connected and migrated successfully")
 
 	return db
 }

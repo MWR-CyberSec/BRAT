@@ -55,10 +55,14 @@ func (a AuthServiceImpl) Login(c *gin.Context) {
 	}
 
 	// Check password
+	log.Info("User password: ", user.Password)
+	hashedPasswrd, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+	log.Info("Request password: ", string(hashedPasswrd))
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password))
 	if err != nil {
 		log.Error("Failed login attempt for user: ", user.Email)
 		c.JSON(http.StatusUnauthorized, pkg.BuildResponse[any](constant.Unauthorised, nil))
+		return
 	}
 
 	// Generate JWT token

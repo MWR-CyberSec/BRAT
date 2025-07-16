@@ -19,6 +19,7 @@ type AgentService interface {
 	SetStager(name string, isStager bool) error
 	ClearAgents(*gin.Context)
 	GetAgentByName(name string) (*dao.Agent, error)
+	UpdateAgent(agent *dao.Agent) error
 }
 
 type AgentServiceImpl struct {
@@ -113,6 +114,10 @@ func (s *AgentServiceImpl) SetStager(name string, isStager bool) error {
 	_ = s.agentsRepository.SetStager(name, isStager)
 
 	return nil
+}
+
+func (s *AgentServiceImpl) UpdateAgent(agent *dao.Agent) error {
+	return s.agentsRepository.UpdateAgent(agent)
 }
 
 func AgentServiceInit(agentsRepository repository.AgentRepository) *AgentServiceImpl {

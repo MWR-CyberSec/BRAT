@@ -16,6 +16,8 @@ type Initialization struct {
 	DashboardCtrl controller.DashboardController
 	CommandSvc    service.CommandService
 	CommandCtrl   controller.CommandController
+	StagerCtrl    controller.StagerController
+	DebugCtrl     controller.DebugController
 }
 
 func NewInitialization(
@@ -28,6 +30,8 @@ func NewInitialization(
 	dashboardController controller.DashboardController,
 	commandService service.CommandService,
 	commandController controller.CommandController,
+	stagerController controller.StagerController,
+	debugController controller.DebugController,
 ) *Initialization {
 	return &Initialization{
 		UserRepo:      userRepo,
@@ -39,5 +43,7 @@ func NewInitialization(
 		DashboardCtrl: dashboardController,
 		CommandSvc:    commandService,
 		CommandCtrl:   commandController,
+		StagerCtrl:    stagerController,
+		DebugCtrl:     debugController,
 	}
 }

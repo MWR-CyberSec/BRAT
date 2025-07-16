@@ -17,7 +17,6 @@ import (
 
 func Init() *Initialization {
 	gormDB := InitDB()
-	redis := InitRedis()
 	userRepositoryImpl := repository.UserRepositoryInit(gormDB)
 	userServiceImpl := service.UserServiceInit(userRepositoryImpl)
 	userControllerImpl := controller.UserControllerInit(userServiceImpl)
@@ -27,16 +26,23 @@ func Init() *Initialization {
 	agentServiceImpl := service.AgentServiceInit(agentRepositoryImpl)
 	agentControllerImpl := controller.AgentControllerInit(agentServiceImpl)
 	dashboardServiceImpl := service.DashboardServiceInit(agentServiceImpl)
-	commandServiceImpl := service.CommandServiceInit(redis)
-	commandControllerImpl := controller.CommandControllerInit(commandServiceImpl)
 	dashboardControllerImpl := controller.DashboardControllerInit(dashboardServiceImpl)
-	initialization := NewInitialization(userRepositoryImpl, userServiceImpl, userControllerImpl, authControllerImpl, agentControllerImpl, dashboardServiceImpl, dashboardControllerImpl, commandServiceImpl, commandControllerImpl)
+	client := InitRedis()
+	commandServiceImpl := service.CommandServiceInit(client)
+	commandControllerImpl := controller.CommandControllerInit(commandServiceImpl)
+	stagerServiceImpl := service.StagerServiceInit()
+	stagerControllerImpl := controller.StagerControllerInit(stagerServiceImpl)
+	debugServiceImpl := service.DebugServiceInit(agentRepositoryImpl, client, commandServiceImpl)
+	debugControllerImpl := controller.DebugControllerInit(debugServiceImpl)
+	initialization := NewInitialization(userRepositoryImpl, userServiceImpl, userControllerImpl, authControllerImpl, agentControllerImpl, dashboardServiceImpl, dashboardControllerImpl, commandServiceImpl, commandControllerImpl, stagerControllerImpl, debugControllerImpl)
 	return initialization
 }
 
 // injector.go:
 
 var db = wire.NewSet(InitDB)
+
+var redisSet = wire.NewSet(InitRedis)
 
 var userServiceSet = wire.NewSet(service.UserServiceInit, wire.Bind(new(service.UserService), new(*service.UserServiceImpl)))
 
@@ -54,11 +60,21 @@ var agentServiceSet = wire.NewSet(service.AgentServiceInit, wire.Bind(new(servic
 
 var agentCtrlSet = wire.NewSet(controller.AgentControllerInit, wire.Bind(new(controller.AgentController), new(*controller.AgentControllerImpl)))
 
+var commandServiceSet = wire.NewSet(service.CommandServiceInit, wire.Bind(new(service.CommandService), new(*service.CommandServiceImpl)))
+
+var commandCtrlSet = wire.NewSet(controller.CommandControllerInit, wire.Bind(new(controller.CommandController), new(*controller.CommandControllerImpl)))
+
+// Stager service and controller sets
+var stagerServiceSet = wire.NewSet(service.StagerServiceInit, wire.Bind(new(service.StagerService), new(*service.StagerServiceImpl)))
+
+var stagerCtrlSet = wire.NewSet(controller.StagerControllerInit, wire.Bind(new(controller.StagerController), new(*controller.StagerControllerImpl)))
+
+// Debug service and controller sets
+var debugServiceSet = wire.NewSet(service.DebugServiceInit, wire.Bind(new(service.DebugService), new(*service.DebugServiceImpl)))
+
+var debugCtrlSet = wire.NewSet(controller.DebugControllerInit, wire.Bind(new(controller.DebugController), new(*controller.DebugControllerImpl)))
+
 // Make sure dashboardServiceSet uses agentService
 var dashboardServiceSet = wire.NewSet(service.DashboardServiceInit, wire.Bind(new(service.DashboardService), new(*service.DashboardServiceImpl)))
 
 var dashboardCtrlSet = wire.NewSet(controller.DashboardControllerInit, wire.Bind(new(controller.DashboardController), new(*controller.DashboardControllerImpl)))
-
-var commandServiceSet = wire.NewSet(service.CommandServiceInit, wire.Bind(new(service.CommandService), new(*service.CommandServiceImpl)))
-
-var commandCtrlSet = wire.NewSet(controller.CommandControllerInit, wire.Bind(new(controller.CommandController), new(*controller.CommandControllerImpl)))

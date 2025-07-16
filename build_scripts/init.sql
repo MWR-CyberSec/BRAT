@@ -17,11 +17,13 @@ CREATE TABLE agents (
     is_stager BOOLEAN NOT NULL,
     source VARCHAR(255),
     system_info TEXT,
+    capabilities TEXT,
+    version VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP
 );
 
 -- Add default admin user (password: admin123)
-INSERT INTO users (name, email, password, role);
-VALUES ('Admin', 'admin@example.com', '$2a$10$ZWvkAx8Qj0G0CrVt.AJhU.mQjndiYxj4H5PUfA3Kc4MhlQFqAKtMS', 'admin');
+INSERT INTO users (name, email, password, role)
+VALUES ('Admin', 'admin@example.com', '$2a$10$ok447P2Q2p1W63VWnjAfR.arkpt3qoAMatZJXkouKngeRv6HqOdK2', 'admin');
