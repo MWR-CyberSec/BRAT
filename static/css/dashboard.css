@@ -406,6 +406,31 @@
     box-shadow: 0 0 15px rgba(255, 42, 109, 0.5);
 }
 
+/* Stats card actions container */
+.stats-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Debug button styling */
+.btn-debug {
+    background: linear-gradient(45deg, #ff00ff, #00ffff);
+    border: 1px solid #ff00ff;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-debug:hover {
+    background: linear-gradient(45deg, #ff44ff, #44ffff);
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+.btn-debug i {
+    margin-right: 5px;
+}
+
 /* Responsive adjustments */
 @media (max-width: 992px) {
     .dashboard-grid {
