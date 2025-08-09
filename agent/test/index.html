@@ -162,6 +162,17 @@ agent\test\index.html -->
                 <button id="unload-agent" class="danger" disabled>Unload Agent</button>
             </div>
         </div>
+
+        <div class="card">
+            <h3>Navigation Testing</h3>
+            <p>Test the agent's ability to persist across page navigations.</p>
+            
+            <div class="button-container">
+                <button id="navigate-to-test">Navigate to Test Page</button>
+                <button id="navigate-history">Use History API</button>
+                <button id="ajax-content">Load Content via AJAX</button>
+            </div>
+        </div>
         
         <div class="card">
             <h3>Configuration</h3>
@@ -447,6 +458,62 @@ Line 3</textarea>
             `;
             document.getElementById('content-target').innerHTML = searchBox;
             addLogEntry('Added search box', 'success');
+        });
+
+        document.getElementById('navigate-to-test').addEventListener('click', function() {
+            addLogEntry('Navigating to test page...', 'info');
+            window.location.href = './navigate.html';
+        });
+
+        document.getElementById('navigate-history').addEventListener('click', function() {
+            addLogEntry('Using History API to navigate...', 'info');
+            window.history.pushState({}, 'Test Page', './navigate.html');
+            addLogEntry('URL changed without full page navigation', 'warning');
+            addLogEntry('If the agent hooked the History API, it should have intercepted this', 'info');
+        });
+
+        document.getElementById('ajax-content').addEventListener('click', function() {
+            addLogEntry('Loading content via AJAX...', 'info');
+            
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', './navigate.html', true);
+            
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    addLogEntry('Content loaded via AJAX', 'success');
+                    
+                    // Extract the body content
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = xhr.responseText;
+                    const bodyContent = tempDiv.querySelector('body').innerHTML;
+                    
+                    // Create a container for the loaded content
+                    const ajaxContent = document.createElement('div');
+                    ajaxContent.style.margin = '20px 0';
+                    ajaxContent.style.padding = '15px';
+                    ajaxContent.style.border = '2px dashed #00aaff';
+                    ajaxContent.style.borderRadius = '8px';
+                    ajaxContent.innerHTML = `
+                        <h3 style="color: #00aaff; text-align: center;">Content Loaded via AJAX</h3>
+                        <div>${bodyContent}</div>
+                        <div class="button-container">
+                            <button onclick="document.querySelector('.ajax-content').remove()">Close AJAX Content</button>
+                        </div>
+                    `;
+                    ajaxContent.className = 'ajax-content';
+                    
+                    // Add to page
+                    document.querySelector('.container').appendChild(ajaxContent);
+                } else {
+                    addLogEntry(`AJAX error: ${xhr.status}`, 'error');
+                }
+            };
+            
+            xhr.onerror = function() {
+                addLogEntry('AJAX request failed', 'error');
+            };
+            
+            xhr.send();
         });
         
         // Initial log
