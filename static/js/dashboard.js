@@ -27,7 +27,9 @@ function initDashboard(agentId) {
     // Set up navigation controls
     setupNavigationControls();
 
+    // Initialize modals
     initRemoteView();
+    initCommandHistoryModal();
     
     // Set up refresh interval for pending commands and command history
     setInterval(() => {
@@ -512,6 +514,9 @@ function loadCommandHistory() {
         
         // Process completed commands to show in console
         processCompletedCommands(commands);
+        
+        // Update command history table for modal
+        updateCommandHistoryTable(commands);
     })
     .catch(error => {
         console.error('Error loading command history:', error);
@@ -564,6 +569,7 @@ function processCompletedCommands(commands) {
         const status = cmd.Status || cmd.status;
         const command = cmd.Command || cmd.command;
         const response = cmd.Response || cmd.response;
+        const commandID = cmd.ID || cmd.id;
         
         // Display response in console
         try {
@@ -584,8 +590,47 @@ function processCompletedCommands(commands) {
         
         // Mark command as processed
         cmd.processedByConsole = true;
+        
+        // Remove the command from history after displaying the response
+        if (commandID) {
+            removeCompletedCommandFromHistory(commandID);
+        }
     });
 
+}
+
+// Remove a completed command from history after it's been displayed
+function removeCompletedCommandFromHistory(commandID) {
+    const queueId = window.agentName || currentAgentId;
+    
+    if (!commandID) {
+        console.warn('Cannot remove command: no command ID provided');
+        return;
+    }
+    
+    console.log(`Removing completed command ${commandID} from history`);
+    
+    fetch(`/commands/agent/${queueId}/history/${commandID}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Failed to remove command: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log(`Command ${commandID} removed from history:`, data.message);
+        // Refresh the command history display
+        updateCommandHistoryTable([]);
+    })
+    .catch(error => {
+        console.error('Error removing command from history:', error);
+        // Don't show user error - this is background cleanup
+    });
 }
 
 let remoteViewActive = true;
@@ -796,4 +841,185 @@ function displayRemoteViewResult(commandResult) {
 function updateRemoteViewStatus(message) {
     const iframe = document.getElementById('remote-view-iframe');
     iframe.srcdoc = `<html><body style="font-family: Arial, sans-serif; color: #00eeff; background-color: #0a0a14; display: flex; justify-content: center; align-items: center; height: 100%; margin: 0;"><p>${message}</p></body></html>`;
+}
+
+// Command History Modal Functions
+function initCommandHistoryModal() {
+    console.log('Initializing command history modal...');
+    const modal = document.getElementById('command-history-modal');
+    const openBtn = document.getElementById('command-history-btn');
+    const closeBtn = document.querySelector('#command-history-modal .modal-close');
+    const refreshBtn = document.getElementById('refresh-command-history');
+    const clearBtn = document.getElementById('clear-command-history');
+    
+    console.log('Modal elements found:', {
+        modal: !!modal,
+        openBtn: !!openBtn,
+        closeBtn: !!closeBtn,
+        refreshBtn: !!refreshBtn,
+        clearBtn: !!clearBtn
+    });
+    
+    // Open modal when clicking the Command History button
+    if (openBtn) {
+        openBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Command history button clicked!');
+            openCommandHistoryModal();
+        });
+    } else {
+        console.error('Command history button not found!');
+    }
+    
+    // Close modal when clicking X
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            console.log('Closing command history modal');
+            modal.style.display = 'none';
+        });
+    }
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        if (modal && event.target === modal) {
+            console.log('Closing modal by clicking outside');
+            modal.style.display = 'none';
+        }
+    });
+    
+    // Refresh command history
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            console.log('Refreshing command history');
+            loadCommandHistory();
+            updateCommandCount();
+        });
+    }
+    
+    // Clear command history
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear the command history? This action cannot be undone.')) {
+                console.log('Clearing command history');
+                clearCommandHistory();
+            }
+        });
+    }
+}
+
+function openCommandHistoryModal() {
+    const modal = document.getElementById('command-history-modal');
+    modal.style.display = 'block';
+    
+    // Refresh the command history when opening
+    loadCommandHistory();
+    updateCommandCount();
+}
+
+function updateCommandCount() {
+    const tableBody = document.getElementById('command-history-table-body');
+    const countElement = document.getElementById('command-count');
+    const lastUpdatedElement = document.getElementById('last-updated');
+    
+    if (tableBody && countElement) {
+        const rowCount = tableBody.children.length;
+        // Don't count the "no commands" row
+        const actualCount = tableBody.innerHTML.includes('No commands in history') ? 0 : rowCount;
+        countElement.textContent = `Total Commands: ${actualCount}`;
+    }
+    
+    if (lastUpdatedElement) {
+        lastUpdatedElement.textContent = `Last Updated: ${new Date().toLocaleTimeString()}`;
+    }
+}
+
+function clearCommandHistory() {
+    fetch('/commands/clear', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('jwt_token'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to clear command history');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Command history cleared:', data);
+        loadCommandHistory(); // Refresh the display
+        addConsoleMessage('Command history cleared', 'system');
+    })
+    .catch(error => {
+        console.error('Error clearing command history:', error);
+        addConsoleMessage('Failed to clear command history: ' + error.message, 'error');
+    });
+}
+
+function updateCommandHistoryTable(commands) {
+    const tableBody = document.getElementById('command-history-table-body');
+    if (!tableBody) return;
+    
+    // Clear existing rows
+    tableBody.innerHTML = '';
+    
+    if (!commands || commands.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align: center; color: var(--cyberpunk-accent);">
+                    No commands in history
+                </td>
+            </tr>
+        `;
+        updateCommandCount();
+        return;
+    }
+    
+    // Sort commands by creation time (newest first)
+    const sortedCommands = commands.sort((a, b) => {
+        const timeA = new Date(a.CreatedAt || a.created_at);
+        const timeB = new Date(b.CreatedAt || b.created_at);
+        return timeB - timeA;
+    });
+    
+    sortedCommands.forEach(cmd => {
+        const row = document.createElement('tr');
+        
+        // Format time
+        const createdAt = new Date(cmd.CreatedAt || cmd.created_at);
+        const timeStr = createdAt.toLocaleTimeString();
+        
+        // Get command text
+        const command = cmd.Command || cmd.command || 'Unknown';
+        
+        // Get status
+        const status = cmd.Status || cmd.status || 'unknown';
+        
+        // Get response (truncate if too long for display)
+        let response = cmd.Response || cmd.response || '';
+        if (response.length > 300) {
+            response = response.substring(0, 300) + '...';
+        }
+        
+        row.innerHTML = `
+            <td>${timeStr}</td>
+            <td>${escapeHtml(command)}</td>
+            <td><span class="command-status ${status.toLowerCase()}">${status.toUpperCase()}</span></td>
+            <td>${escapeHtml(response)}</td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+    
+    // Update command count in modal if it's open
+    updateCommandCount();
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }

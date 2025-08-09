@@ -130,6 +130,7 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 		commandRoutes.POST("/agent/:agentID", init.CommandCtrl.QueueCommand)
 		commandRoutes.GET("/agent/:agentID/pending", init.CommandCtrl.GetPendingCommands)
 		commandRoutes.GET("/agent/:agentID/history", init.CommandCtrl.GetCommandHistory)
+		commandRoutes.DELETE("/agent/:agentID/history/:commandID", init.CommandCtrl.RemoveCompletedCommand)
 		commandRoutes.POST("/clear", init.CommandCtrl.ClearAllCommands)
 
 		commandRoutes.GET("/agent/:agentID/remote_view", init.CommandCtrl.GetLatestRemoteView)

@@ -69,6 +69,9 @@
                 <div class="panel-header">
                     <h3>Command Console</h3>
                     <div class="panel-actions">
+                        <button id="command-history-btn" class="btn btn-small">
+                            <i class="fas fa-history btn-icon"></i> Command History
+                        </button>
                         <button id="clear-all-commands" class="btn btn-small danger">
                             <span class="btn-icon">⚠️</span> Clear All Commands
                         </button>
@@ -200,6 +203,51 @@
             <div class="modal-body">
                 <div class="iframe-container">
                     <iframe id="remote-view-iframe" sandbox="allow-same-origin" srcdoc="<html><body><p>Loading remote view...</p></body></html>"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Command History Modal -->
+    <div id="command-history-modal" class="modal">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-history"></i> Command History</h2>
+                <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-toolbar">
+                <div class="view-info">
+                    <span id="command-count">Total Commands: 0</span>
+                    <span id="last-updated">Last Updated: --</span>
+                </div>
+                <div class="view-controls">
+                    <button id="refresh-command-history" class="btn btn-small">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                    <button id="clear-command-history" class="btn btn-small danger">
+                        <i class="fas fa-trash"></i> Clear History
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="command-history-container">
+                    <table class="neon-table command-history-table">
+                        <thead>
+                            <tr>
+                                <th width="15%">Time</th>
+                                <th width="25%">Command</th>
+                                <th width="15%">Status</th>
+                                <th width="45%">Response</th>
+                            </tr>
+                        </thead>
+                        <tbody id="command-history-table-body">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--cyberpunk-accent); padding: 20px;">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading command history...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
