@@ -15,6 +15,7 @@ type AgentRepository interface {
 	GetStagers() ([]dao.Agent, error)
 	ClearAgents() error
 	GetAgentByName(name string) (*dao.Agent, error)
+	UpdateAgent(agent *dao.Agent) error
 }
 
 type AgentRepositoryImpl struct {
@@ -25,6 +26,9 @@ func (r *AgentRepositoryImpl) GetAgentByName(name string) (*dao.Agent, error) {
 	var agent dao.Agent
 	result := r.db.Where("name = ?", name).First(&agent)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.New("agent not found")
+		}
 		return nil, result.Error
 	}
 	return &agent, nil
@@ -92,6 +96,10 @@ func (r *AgentRepositoryImpl) GetStagers() ([]dao.Agent, error) {
 		return nil, result.Error
 	}
 	return agents, nil
+}
+
+func (r *AgentRepositoryImpl) UpdateAgent(agent *dao.Agent) error {
+	return r.db.Save(agent).Error
 }
 
 func AgentRepositoryInit(db *gorm.DB) *AgentRepositoryImpl {

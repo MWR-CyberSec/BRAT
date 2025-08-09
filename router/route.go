@@ -130,11 +130,49 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 		commandRoutes.POST("/agent/:agentID", init.CommandCtrl.QueueCommand)
 		commandRoutes.GET("/agent/:agentID/pending", init.CommandCtrl.GetPendingCommands)
 		commandRoutes.GET("/agent/:agentID/history", init.CommandCtrl.GetCommandHistory)
+		commandRoutes.DELETE("/agent/:agentID/history/:commandID", init.CommandCtrl.RemoveCompletedCommand)
 		commandRoutes.POST("/clear", init.CommandCtrl.ClearAllCommands)
 
 		commandRoutes.GET("/agent/:agentID/remote_view", init.CommandCtrl.GetLatestRemoteView)
 		commandRoutes.GET("/agent/:agentID/remote_view/history", init.CommandCtrl.GetRemoteViewHistory)
 	}
+
+	/*
+	* STAGER routes
+	*
+	 */
+	stagerRoutes := router.Group("/api/stager")
+	stagerRoutes.Use(middleware.JWTAuth()) // Require authentication for stager operations
+	{
+		stagerRoutes.GET("/plugins", init.StagerCtrl.GetAvailablePlugins)
+		stagerRoutes.POST("/generate", init.StagerCtrl.GenerateStager)
+		stagerRoutes.GET("/file/:filename", init.StagerCtrl.GetStagerFile)
+
+		// Plugin management routes
+		stagerRoutes.POST("/plugins", init.StagerCtrl.CreatePlugin)
+		stagerRoutes.PUT("/plugins/:name", init.StagerCtrl.UpdatePlugin)
+		stagerRoutes.DELETE("/plugins/:name", init.StagerCtrl.DeletePlugin)
+		stagerRoutes.GET("/plugins/template", init.StagerCtrl.GetPluginTemplate)
+	}
+
+	/*
+	* DEBUG routes
+	*
+	 */
+	debugRoutes := router.Group("/debug")
+	debugRoutes.Use(middleware.JWTAuth()) // Require authentication for debug operations
+	{
+		debugRoutes.GET("/", init.DebugCtrl.GetDebugDashboard)
+		debugRoutes.GET("/api/redis-queues", init.DebugCtrl.GetRedisQueueData)
+		debugRoutes.GET("/api/agents", init.DebugCtrl.GetAgentDebugData)
+		debugRoutes.GET("/api/health", init.DebugCtrl.GetSystemHealth)
+		debugRoutes.GET("/api/websockets", init.DebugCtrl.GetWebSocketConnections)
+		debugRoutes.POST("/api/flush-queues", init.DebugCtrl.FlushRedisQueues)
+		debugRoutes.GET("/api/test-db", init.DebugCtrl.TestDatabaseConnection)
+	}
+
+	// Public stager delivery route (no authentication required for delivery)
+	router.GET("/stager/:filename", init.StagerCtrl.GetStagerForDelivery)
 
 	/*
 	* WEBSOCKET routes
@@ -216,6 +254,96 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 				continue
 			}
 
+			// Handle agent activation (full agent connection)
+			if messageType == "agent_activation" {
+				// Extract agent details from activation message
+				agentID, _ := message["agentId"].(string)
+				version, _ := message["version"].(string)
+				systemInfoRaw, hasSystemInfo := message["systemInfo"].(map[string]interface{})
+				capabilities, _ := message["capabilities"].(map[string]interface{})
+
+				println("Agent activation received for:", agentID)
+
+				// Try to find existing agent first
+				existingAgent, err := init.AgentCtrl.GetAgentByName(agentID)
+				if err != nil {
+					// Agent doesn't exist, create new one
+					agentS := &dao.Agent{
+						Name:     agentID,
+						IsStager: false, // This is a full agent
+						SourceIP: c.ClientIP(),
+					}
+
+					// Convert system info to JSON string for storage
+					if hasSystemInfo {
+						systemInfoBytes, err := json.Marshal(systemInfoRaw)
+						if err == nil {
+							agentS.SystemInfo = string(systemInfoBytes)
+						}
+					}
+
+					// Convert capabilities to JSON string for storage
+					if capabilities != nil {
+						capabilitiesBytes, err := json.Marshal(capabilities)
+						if err == nil {
+							agentS.Capabilities = string(capabilitiesBytes)
+						}
+					}
+
+					// Set version if provided
+					if version != "" {
+						agentS.Version = version
+					}
+
+					// Save the agent to the database
+					init.AgentCtrl.CreateAgent(agentS)
+					println("New agent created:", agentID)
+				} else {
+					// Agent exists, update it
+					existingAgent.IsStager = false // Upgrade from stager to full agent
+					existingAgent.SourceIP = c.ClientIP()
+
+					// Update system info if provided
+					if hasSystemInfo {
+						systemInfoBytes, err := json.Marshal(systemInfoRaw)
+						if err == nil {
+							existingAgent.SystemInfo = string(systemInfoBytes)
+						}
+					}
+
+					// Update capabilities if provided
+					if capabilities != nil {
+						capabilitiesBytes, err := json.Marshal(capabilities)
+						if err == nil {
+							existingAgent.Capabilities = string(capabilitiesBytes)
+						}
+					}
+
+					// Update version if provided
+					if version != "" {
+						existingAgent.Version = version
+					}
+
+					// Save the updated agent
+					init.AgentCtrl.UpdateAgent(existingAgent)
+					println("Existing agent updated:", agentID)
+				}
+
+				// Send acknowledgment response
+				response := map[string]interface{}{
+					"type":      "activation_ack",
+					"agentId":   agentID,
+					"timestamp": time.Now().Format(time.RFC3339),
+					"message":   "Agent activation successful",
+				}
+
+				responseBytes, _ := json.Marshal(response)
+				conn.WriteMessage(websocket.TextMessage, responseBytes)
+
+				println("Agent activation confirmed:", agentID)
+				continue
+			}
+
 			// Handle heartbeat messages - this is where we check for pending commands
 			if messageType == "heartbeat" {
 				agentID, agentOk := message["agentId"].(string)
@@ -230,14 +358,20 @@ func InitRouter(init *config.Initialization) *gin.Engine {
 				if err != nil {
 					println("Error retrieving agent:", err.Error())
 
-					// Send a simple pong response
-					response := map[string]interface{}{
-						"type":      "pong",
-						"timestamp": time.Now().Format(time.RFC3339),
+					// Agent doesn't exist, create it as a basic agent
+					println("Creating missing agent from heartbeat:", agentID)
+					agentS := &dao.Agent{
+						Name:     agentID,
+						IsStager: false, // Assume it's a full agent if sending heartbeats
+						SourceIP: c.ClientIP(),
 					}
-					responseBytes, _ := json.Marshal(response)
-					conn.WriteMessage(websocket.TextMessage, responseBytes)
-					continue
+
+					// Create the agent
+					init.AgentCtrl.CreateAgent(agentS)
+					println("Agent created from heartbeat:", agentID)
+				} else {
+					// Agent exists, we could update last seen timestamp here if needed
+					println("Agent found for heartbeat:", agentID)
 				}
 
 				// IMPORTANT: Always use the original agent name for command lookup

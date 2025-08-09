@@ -51,6 +51,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    document.getElementById('generate-stager-btn')?.addEventListener('click', function() {
+        console.log("Generate stager button clicked"); // Debug
+        if (window.stagerConfigurator) {
+            window.stagerConfigurator.openModal();
+        } else {
+            console.error("Stager configurator not initialized");
+            alert("Stager configurator not ready. Please refresh the page.");
+        }
+    });
+
     const loginForm = document.getElementById('login-form');
     console.log('Login form found:', !!loginForm);
     

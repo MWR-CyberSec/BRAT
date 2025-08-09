@@ -1,20 +1,20 @@
 package controller
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Et43/BARK/service"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
-
-	"encoding/json"
-	"fmt"
 )
 
 type CommandController interface {
 	QueueCommand(c *gin.Context)
 	GetPendingCommands(c *gin.Context)
 	GetCommandHistory(c *gin.Context)
+	RemoveCompletedCommand(c *gin.Context)
 	ClearAllCommands(c *gin.Context)
 
 	GetLatestRemoteView(c *gin.Context)
@@ -130,6 +130,26 @@ func (c *CommandControllerImpl) GetRemoteViewHistory(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"history": history})
+}
+
+// RemoveCompletedCommand removes a completed command from the history
+func (c *CommandControllerImpl) RemoveCompletedCommand(ctx *gin.Context) {
+	agentID := ctx.Param("agentID")
+	commandID := ctx.Param("commandID")
+
+	err := c.commandService.RemoveCompletedCommand(agentID, commandID)
+	if err != nil {
+		log.Error("Failed to remove completed command: ", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to remove completed command",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("Command %s removed from history", commandID),
+	})
 }
 
 func CommandControllerInit(commandService service.CommandService) *CommandControllerImpl {

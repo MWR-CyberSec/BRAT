@@ -45,13 +45,19 @@ document.addEventListener('DOMContentLoaded', function() {
         
         fetch('/agents')
             .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
                 if (!response.ok) {
-                    throw new Error('Failed to fetch agents data');
+                    throw new Error(`Failed to fetch agents data: ${response.status} ${response.statusText}`);
                 }
                 return response.json();
             })
             .then(agents => {
                 console.log('Agents data received:', agents);
+                console.log('Number of agents:', agents ? agents.length : 'null/undefined');
+                if (agents && Array.isArray(agents)) {
+                    console.log('Agents array details:', agents.map(a => ({ id: a.id, name: a.name, source: a.source })));
+                }
                 populateAgentsTable(agents);
             })
             .catch(error => {
@@ -97,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${agent.source || 'Unknown'}</td>
                 <td>${agent.is_stager ? 'Stager' : 'Agent'}</td>
                 <td>
-                    <button class="btn" href="/dasboard/${agent.id}" data-agent-id="${agent.id}">
+                    <button class="btn" data-agent-id="${agent.id}">
                         <span class="btn-icon">⚡</span> Manage
                     </button>
                 </td>

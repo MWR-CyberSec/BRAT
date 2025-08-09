@@ -18,7 +18,6 @@ type CommandService interface {
 	DequeueCommand(agentID string) (*constant.QueuedCommand, error)
 	UpdateCommandStatus(agentID string, commandID string, status string, response string) error
 	GetCommandHistory(agentID string) ([]*constant.QueuedCommand, error)
-	RemoveCompletedCommand(agentID string, commandID string) error
 	ClearAllCommands() error
 
 	StoreRemoteViewData(agentID string, result string) error
@@ -112,19 +111,11 @@ func (s *CommandServiceImpl) DequeueCommand(agentID string) (*constant.QueuedCom
 	ctx := context.Background()
 
 	// Try first with the direct agent ID as provided
-	fmt.Printf("Dequeuing command for agent: '%s'\n", agentID)
+	fmt.Printf("I AM NOT LOSING MY MIND?: '%s'\n", agentID)
 
 	queueKey := getCommandQueueKey(agentID)
 
-	fmt.Printf("Using queue key: '%s'\n", queueKey)
-
-	// Check how many commands are in the queue before dequeuing
-	queueLength, err := s.redisClient.LLen(ctx, queueKey).Result()
-	if err != nil {
-		fmt.Printf("Error getting queue length: %v\n", err)
-	} else {
-		fmt.Printf("Queue length before dequeue: %d\n", queueLength)
-	}
+	fmt.Printf("Attempting to dequeue command using key: '%s'\n", queueKey)
 
 	cmdJSON, err := s.redisClient.LPop(ctx, queueKey).Result()
 	if err != nil && err != redis.Nil {
@@ -139,34 +130,10 @@ func (s *CommandServiceImpl) DequeueCommand(agentID string) (*constant.QueuedCom
 			return nil, fmt.Errorf("failed to unmarshal command: %w", err)
 		}
 
-		// Check if this command was recently sent (within last 10 seconds) to prevent rapid re-sending
-		if time.Since(cmd.CreatedAt) < 10*time.Second {
-			// Check if command already exists in history with "sent" status
-			historyKey := getCommandHistoryKey(agentID)
-			existingCmds, err := s.redisClient.LRange(ctx, historyKey, 0, 10).Result()
-			if err == nil {
-				for _, existingCmdJSON := range existingCmds {
-					var existingCmd constant.QueuedCommand
-					if err := json.Unmarshal([]byte(existingCmdJSON), &existingCmd); err == nil {
-						if existingCmd.ID == cmd.ID && existingCmd.Status == "sent" {
-							fmt.Printf("[DUPLICATE PREVENTION] Command %s already sent recently, skipping\n", cmd.ID)
-							return nil, nil
-						}
-					}
-				}
-			}
-		}
-
 		cmd.Status = "sent"
-		fmt.Printf("[COMMAND DEQUEUE] Agent '%s': ID=%s, Command=%s, CreatedAt=%s\n", agentID, cmd.ID, cmd.Command, cmd.CreatedAt.Format(time.RFC3339))
+		fmt.Printf("Command dequeued for agent '%s': %s\n", agentID, cmd.Command)
 
-		// Check queue length after dequeuing
-		queueLength, err := s.redisClient.LLen(ctx, queueKey).Result()
-		if err == nil {
-			fmt.Printf("Queue length after dequeue: %d\n", queueLength)
-		}
-
-		// Add command to history only if it doesn't already exist
+		// Add command to history
 		if err := s.addToCommandHistory(agentID, cmd); err != nil {
 			fmt.Printf("Warning: failed to add command to history: %v\n", err)
 		}
@@ -188,7 +155,6 @@ func (s *CommandServiceImpl) DequeueCommand(agentID string) (*constant.QueuedCom
 	}
 
 	// No commands found
-	fmt.Printf("No commands found in queue for agent '%s'\n", agentID)
 	return nil, nil
 }
 
@@ -261,58 +227,11 @@ func (s *CommandServiceImpl) GetCommandHistory(agentID string) ([]*constant.Queu
 	return commands, nil
 }
 
-// RemoveCompletedCommand removes a completed command from the history
-func (s *CommandServiceImpl) RemoveCompletedCommand(agentID string, commandID string) error {
-	ctx := context.Background()
-
-	historyKey := getCommandHistoryKey(agentID)
-	cmdsJSON, err := s.redisClient.LRange(ctx, historyKey, 0, -1).Result()
-	if err != nil {
-		return fmt.Errorf("failed to get command history: %w", err)
-	}
-
-	// Find and remove the command with the matching ID
-	for _, cmdJSON := range cmdsJSON {
-		var cmd constant.QueuedCommand
-		if err := json.Unmarshal([]byte(cmdJSON), &cmd); err != nil {
-			continue
-		}
-
-		if cmd.ID == commandID {
-			// Remove the command from the list
-			err = s.redisClient.LRem(ctx, historyKey, 1, cmdJSON).Err()
-			if err != nil {
-				return fmt.Errorf("failed to remove command from history: %w", err)
-			}
-
-			fmt.Printf("Command %s removed from history for agent %s\n", commandID, agentID)
-			return nil
-		}
-	}
-
-	return fmt.Errorf("command %s not found in history for agent %s", commandID, agentID)
-}
-
 // Helper to add a command to history
 func (s *CommandServiceImpl) addToCommandHistory(agentID string, cmd constant.QueuedCommand) error {
 	ctx := context.Background()
 
 	historyKey := getCommandHistoryKey(agentID)
-	
-	// Check if command already exists in history to prevent duplicates
-	cmdsJSON, err := s.redisClient.LRange(ctx, historyKey, 0, -1).Result()
-	if err == nil {
-		for _, cmdJSON := range cmdsJSON {
-			var existingCmd constant.QueuedCommand
-			if err := json.Unmarshal([]byte(cmdJSON), &existingCmd); err == nil {
-				if existingCmd.ID == cmd.ID {
-					fmt.Printf("Command %s already exists in history, skipping duplicate\n", cmd.ID)
-					return nil
-				}
-			}
-		}
-	}
-
 	cmdJSON, err := json.Marshal(cmd)
 	if err != nil {
 		return fmt.Errorf("failed to marshal command: %w", err)

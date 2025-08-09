@@ -2,10 +2,16 @@
 <div class="card" id="stats-card">
     <div class="card-header">
         <h3>System Stats</h3>
-        <button id="refresh-stats" class="btn">
-            <i class="fas fa-sync"></i>
-            <span>Refresh</span>
-        </button>
+        <div class="stats-actions">
+            <button id="refresh-stats" class="btn">
+                <i class="fas fa-sync"></i>
+                <span>Refresh</span>
+            </button>
+            <button id="debug-dashboard-btn" class="btn btn-debug" onclick="navigateToDebugDashboard()">
+                <i class="fas fa-bug"></i>
+                <span>Debug</span>
+            </button>
+        </div>
     </div>
     <div class="card-content">
         <div class="cyber-status-line">NETWORK: <span class="cyber-status online" id="network-status">ONLINE</span></div>
@@ -23,4 +29,48 @@
         </div>
     </div>
 </div>
+
+<script>
+function navigateToDebugDashboard() {
+    const token = localStorage.getItem('jwt_token');
+    if (!token) {
+        alert('Please log in to access the debug dashboard');
+        return;
+    }
+    
+    // Make a GET request to the debug dashboard with proper Authorization header
+    fetch('/debug', {
+        method: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + token,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.text();
+        } else if (response.status === 401) {
+            throw new Error('Authentication failed');
+        } else {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+    })
+    .then(html => {
+        // Open the debug dashboard in a new window/tab with the received HTML
+        const debugWindow = window.open('', '_blank');
+        debugWindow.document.write(html);
+        debugWindow.document.close();
+    })
+    .catch(error => {
+        console.error('Error accessing debug dashboard:', error);
+        if (error.message.includes('Authentication failed')) {
+            alert('Authentication failed. Please log in again.');
+            localStorage.removeItem('jwt_token');
+            hideDashboard();
+        } else {
+            alert('Error accessing debug dashboard: ' + error.message);
+        }
+    });
+}
+</script>
 {{ end }}

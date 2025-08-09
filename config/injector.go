@@ -33,6 +33,16 @@ var commandServiceSet = wire.NewSet(service.CommandServiceInit, wire.Bind(new(se
 
 var commandCtrlSet = wire.NewSet(controller.CommandControllerInit, wire.Bind(new(controller.CommandController), new(*controller.CommandControllerImpl)))
 
+// Stager service and controller sets
+var stagerServiceSet = wire.NewSet(service.StagerServiceInit, wire.Bind(new(service.StagerService), new(*service.StagerServiceImpl)))
+
+var stagerCtrlSet = wire.NewSet(controller.StagerControllerInit, wire.Bind(new(controller.StagerController), new(*controller.StagerControllerImpl)))
+
+// Debug service and controller sets
+var debugServiceSet = wire.NewSet(service.DebugServiceInit, wire.Bind(new(service.DebugService), new(*service.DebugServiceImpl)))
+
+var debugCtrlSet = wire.NewSet(controller.DebugControllerInit, wire.Bind(new(controller.DebugController), new(*controller.DebugControllerImpl)))
+
 // Make sure dashboardServiceSet uses agentService
 var dashboardServiceSet = wire.NewSet(
 	service.DashboardServiceInit,
@@ -55,11 +65,15 @@ func Init() *Initialization {
 		agentServiceSet,
 		dashboardServiceSet,
 		commandServiceSet,
+		stagerServiceSet,
+		debugServiceSet,
 		userCtrlSet,
 		authCtrlSet,
 		agentCtrlSet,
 		dashboardCtrlSet,
 		commandCtrlSet,
+		stagerCtrlSet,
+		debugCtrlSet,
 		NewInitialization,
 	)
 	return nil

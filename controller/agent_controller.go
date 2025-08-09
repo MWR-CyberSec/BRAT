@@ -15,6 +15,7 @@ type AgentController interface {
 	SetStager(name string, isStager bool) error
 	ClearAgents(*gin.Context)
 	GetAgentByName(name string) (*dao.Agent, error)
+	UpdateAgent(agent *dao.Agent) error
 }
 
 type AgentControllerImpl struct {
@@ -52,6 +53,10 @@ func (u *AgentControllerImpl) GetStagers(c *gin.Context) {
 func (u *AgentControllerImpl) SetStager(name string, isStager bool) error {
 	u.agentService.SetStager(name, isStager)
 	return nil
+}
+
+func (ctrl *AgentControllerImpl) UpdateAgent(agent *dao.Agent) error {
+	return ctrl.agentService.UpdateAgent(agent)
 }
 
 // Remove NewAgentController to avoid the double binding issue

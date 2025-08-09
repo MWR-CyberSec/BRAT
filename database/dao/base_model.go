@@ -7,9 +7,9 @@ import (
 )
 
 type BaseModel struct {
-	CreatedAt time.Time      `gorm:"->:false;column:created_at" json:"-"`
-	UpdatedAt time.Time      `gorm:"->:false;column:updated_at" json:"-"`
-	DeletedAt gorm.DeletedAt `gorm:"->:false;column:deleted_at" json:"-"`
+	CreatedAt time.Time      `gorm:"column:created_at" json:"created_at"`
+	UpdatedAt time.Time      `gorm:"column:updated_at" json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at" json:"-"`
 }
 
 type User struct {
@@ -23,9 +23,11 @@ type User struct {
 
 type Agent struct {
 	BaseModel
-	ID         int    `gorm:"column:id; primary_key; not null" json:"id"`
-	Name       string `gorm:"column:name" json:"name"`
-	IsStager   bool   `gorm:"column:is_stager" json:"is_stager"`
-	SystemInfo string `gorm:"column:system_info" json:"system_info"` // This is the system info of the agent
-	SourceIP   string `gorm:"column:source" json:"source"`           // This is the source IP of the agent
+	ID           int    `gorm:"column:id; primary_key; not null" json:"id"`
+	Name         string `gorm:"column:name" json:"name"`
+	IsStager     bool   `gorm:"column:is_stager" json:"is_stager"`
+	SystemInfo   string `gorm:"column:system_info" json:"system_info"`   // This is the system info of the agent
+	SourceIP     string `gorm:"column:source" json:"source"`             // This is the source IP of the agent
+	Capabilities string `gorm:"column:capabilities" json:"capabilities"` // JSON string of agent capabilities
+	Version      string `gorm:"column:version" json:"version"`           // Agent version
 }
