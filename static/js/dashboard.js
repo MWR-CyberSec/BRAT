@@ -8,6 +8,20 @@ function initDashboard(agentId) {
     console.log('Initializing dashboard for agent:', agentId);
     currentAgentId = agentId;
     
+    // Initialize accordion menu with a small delay to ensure DOM is ready
+    setTimeout(() => {
+        setupAccordionMenu();
+        
+        // Add a simple test click handler to verify event handling works
+        const testElements = document.querySelectorAll('.accordion-header');
+        console.log('Adding test click handlers to', testElements.length, 'elements');
+        testElements.forEach((el, i) => {
+            el.addEventListener('click', function() {
+                console.log('TEST CLICK HANDLER FIRED for element', i);
+            });
+        });
+    }, 500); // Increased delay
+    
     // Load agent details
     loadAgentDetails(agentId);
     
@@ -39,8 +53,14 @@ function initDashboard(agentId) {
 }
 
 function loadAgentDetails(agentId) {
+
+    // Get the current url
+    const currentUrl = window.location.href;
+    const agentID = currentUrl.split('/').pop();
+
+
     // Fetch agent details from API
-    fetch(`/agents/${agentId}`, {
+    fetch(`/agents/${agentID}`, {
         method: 'GET',
         headers: {
             'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')
@@ -1022,4 +1042,92 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Setup accordion menu functionality
+function setupAccordionMenu() {
+    console.log('Setting up accordion menu...');
+    
+    // First, let's check if the basic elements exist
+    const sidebarMenu = document.querySelector('.sidebar-menu');
+    console.log('Sidebar menu found:', sidebarMenu);
+    
+    const accordionSections = document.querySelectorAll('.accordion-section');
+    console.log('Accordion sections found:', accordionSections.length);
+    
+    const accordionHeaders = document.querySelectorAll('.accordion-header');
+    console.log('Found accordion headers:', accordionHeaders.length);
+    
+    if (accordionHeaders.length === 0) {
+        console.error('No accordion headers found! Check HTML structure.');
+        return;
+    }
+    
+    accordionHeaders.forEach((header, index) => {
+        console.log(`Setting up header ${index}:`, header.textContent.trim());
+        
+        // Add a visual indicator that the handler is attached
+        header.style.cursor = 'pointer';
+        
+        header.addEventListener('click', function(event) {
+            console.log('=== ACCORDION CLICK EVENT ===');
+            console.log('Clicked header:', this.textContent.trim());
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const section = this.getAttribute('data-section');
+            console.log('Section attribute:', section);
+            
+            if (!section) {
+                console.error('No data-section attribute found on header');
+                return;
+            }
+            
+            const content = document.getElementById(section + '-content');
+            console.log('Content element found:', content);
+            
+            if (!content) {
+                console.error('Content element not found for section:', section + '-content');
+                return;
+            }
+            
+            // Toggle the expanded state
+            const isCurrentlyExpanded = content.classList.contains('expanded');
+            console.log('Currently expanded:', isCurrentlyExpanded);
+            
+            if (isCurrentlyExpanded) {
+                console.log('Collapsing section:', section);
+                content.classList.remove('expanded');
+                content.classList.add('collapsed');
+                this.classList.remove('expanded');
+            } else {
+                console.log('Expanding section:', section);
+                content.classList.remove('collapsed');
+                content.classList.add('expanded');
+                this.classList.add('expanded');
+            }
+            
+            console.log('New classes on content:', content.className);
+            console.log('=== END ACCORDION CLICK EVENT ===');
+        });
+        
+        console.log('Event listener added to header:', index);
+    });
+    
+    // Initialize with agent details expanded by default
+    console.log('Initializing default expanded state...');
+    const agentDetailsHeader = document.querySelector('[data-section="agent-details"]');
+    const agentDetailsContent = document.getElementById('agent-details-content');
+    console.log('Agent details header found:', agentDetailsHeader);
+    console.log('Agent details content found:', agentDetailsContent);
+    
+    if (agentDetailsHeader && agentDetailsContent) {
+        agentDetailsContent.classList.add('expanded');
+        agentDetailsHeader.classList.add('expanded');
+        console.log('Agent details section initialized as expanded');
+    } else {
+        console.error('Could not initialize agent details as expanded');
+    }
+    
+    console.log('Accordion menu setup complete');
 }

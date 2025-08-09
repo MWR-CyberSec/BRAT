@@ -689,6 +689,7 @@
         installHooks: function() {
             try {
                 // Monitor form submissions
+                console.log("Installing form submission hooks");
                 document.addEventListener('submit', (e) => {
                     const formData = {};
                     const elements = e.target.elements;

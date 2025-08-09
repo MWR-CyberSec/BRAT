@@ -32,40 +32,95 @@
         </header>
         
         <div class="dashboard-grid">
-            <!-- Agent Details Panel -->
-            <div class="panel agent-details">
-                <div class="panel-header">
-                    <h3>Agent Details</h3>
+            <!-- Left Sidebar with Accordion Menu -->
+            <div class="sidebar-menu">
+                <!-- Agent Details Accordion -->
+                <div class="accordion-section">
+                    <div class="accordion-header" data-section="agent-details">
+                        <h3>Agent Details</h3>
+                        <i class="fas fa-chevron-down accordion-icon"></i>
+                    </div>
+                    <div class="accordion-content" id="agent-details-content">
+                        <div class="detail-item">
+                            <div class="detail-label">ID:</div>
+                            <div class="detail-value" id="detail-id">{{ .agent.Name }}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Source IP:</div>
+                            <div class="detail-value" id="detail-ip">{{ .agent.SourceIP }}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Type:</div>
+                            <div class="detail-value" id="detail-type">{{ if .agent.IsStager }}Stager{{ else }}Full Agent{{ end }}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">First Seen:</div>
+                            <div class="detail-value" id="detail-created">{{ .agent.CreatedAt.Format "Jan 02, 2006 15:04:05" }}</div>
+                        </div>
+                        
+                        <div class="cyberpunk-divider"></div>
+                        
+                        <div class="system-info" id="system-info">
+                            <!-- This will be populated with parsed system info -->
+                        </div>
+                    </div>
                 </div>
-                <div class="panel-content">
-                    <div class="detail-item">
-                        <div class="detail-label">ID:</div>
-                        <div class="detail-value" id="detail-id">{{ .agent.Name }}</div>
+
+                <!-- Command Library Accordion -->
+                <div class="accordion-section">
+                    <div class="accordion-header" data-section="command-library">
+                        <h3>Command Library</h3>
+                        <i class="fas fa-chevron-down accordion-icon"></i>
                     </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Source IP:</div>
-                        <div class="detail-value" id="detail-ip">{{ .agent.SourceIP }}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Type:</div>
-                        <div class="detail-value" id="detail-type">{{ if .agent.IsStager }}Stager{{ else }}Full Agent{{ end }}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">First Seen:</div>
-                        <div class="detail-value" id="detail-created">{{ .agent.CreatedAt.Format "Jan 02, 2006 15:04:05" }}</div>
-                    </div>
-                    
-                    <div class="cyberpunk-divider"></div>
-                    
-                    <div class="system-info" id="system-info">
-                        <!-- This will be populated with parsed system info -->
+                    <div class="accordion-content" id="command-library-content">
+                        <div class="command-category">
+                            <div class="category-header">Reconnaissance</div>
+                            <div class="command-list">
+                                <div class="command-item" data-command="collect_browser_info">Collect Browser Info</div>
+                                <div class="command-item" data-command="scan_local_network">Scan Local Network</div>
+                                <div class="command-item" data-command="capture_cookies">Capture Cookies</div>
+                            </div>
+                        </div>
+                        
+                        <div class="command-category">
+                            <div class="category-header">Persistence</div>
+                            <div class="command-list">
+                                <div class="command-item" data-command="install_service_worker">Install Service Worker</div>
+                                <div class="command-item" data-command="create_local_storage">Create Local Storage</div>
+                                <div class="command-item" data-command="upgrade_agent">Upgrade Agent</div>
+                            </div>
+                        </div>
+                        
+                        <div class="command-category">
+                            <div class="category-header">Data Collection</div>
+                            <div class="command-list">
+                                <div class="command-item" data-command="take_screenshot">Take Screenshot</div>
+                                <div class="command-item" data-command="keylogger_start">Start Keylogger</div>
+                                <div class="command-item" data-command="form_harvester">Form Harvester</div>
+                            </div>
+                        </div>
+                        
+                        <div class="command-category">
+                            <div class="category-header">Control</div>
+                            <div class="command-list">
+                                <div class="command-item" data-command="sleep 10">Sleep (10s)</div>
+                                <div class="command-item" data-command="terminate">Terminate Agent</div>
+                                <div class="command-item" data-command="exfiltrate_data">Exfiltrate Data</div>
+                            </div>
+                        </div>
+
+                        <div class="command-category">
+                            <div class="category-header">Attacks</div>
+                            <div class="command-list">
+                                <div class="command-item" id='remote-view' data-command="remote_view">Remote View</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Command Console Panel -->
-            <div class="panel command-console">
 
+            <!-- Command Console Panel (Right Side) -->
+            <div class="panel command-console">
                 <div class="panel-header">
                     <h3>Command Console</h3>
                     <div class="panel-actions">
@@ -83,7 +138,7 @@
                 <div class="panel-content">
                     <div class="console-output" id="console-output">
                         <div class="console-line system-message">
-                            <span class="timestamp">TODO</span>
+                            <span class="timestamp">{{ .now.Format "15:04:05" }}</span>
                             <span class="message-content">Connection established to agent {{ .agent.Name }}</span>
                         </div>
                         <div class="console-line system-message">
@@ -97,57 +152,7 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- Command Library Panel -->
-            <div class="panel command-library">
-                <div class="panel-header">
-                    <h3>Command Library</h3>
-                </div>
-                <div class="panel-content">
-                    <div class="command-category">
-                        <div class="category-header">Reconnaissance</div>
-                        <div class="command-list">
-                            <div class="command-item" data-command="collect_browser_info">Collect Browser Info</div>
-                            <div class="command-item" data-command="scan_local_network">Scan Local Network</div>
-                            <div class="command-item" data-command="capture_cookies">Capture Cookies</div>
-                        </div>
-                    </div>
-                    
-                    <div class="command-category">
-                        <div class="category-header">Persistence</div>
-                        <div class="command-list">
-                            <div class="command-item" data-command="install_service_worker">Install Service Worker</div>
-                            <div class="command-item" data-command="create_local_storage">Create Local Storage</div>
-                            <div class="command-item" data-command="upgrade_agent">Upgrade Agent</div>
-                        </div>
-                    </div>
-                    
-                    <div class="command-category">
-                        <div class="category-header">Data Collection</div>
-                        <div class="command-list">
-                            <div class="command-item" data-command="take_screenshot">Take Screenshot</div>
-                            <div class="command-item" data-command="keylogger_start">Start Keylogger</div>
-                            <div class="command-item" data-command="form_harvester">Form Harvester</div>
-                        </div>
-                    </div>
-                    
-                    <div class="command-category">
-                        <div class="category-header">Control</div>
-                        <div class="command-list">
-                            <div class="command-item" data-command="sleep 10">Sleep (10s)</div>
-                            <div class="command-item" data-command="terminate">Terminate Agent</div>
-                            <div class="command-item" data-command="exfiltrate_data">Exfiltrate Data</div>
-                        </div>
-                    </div>
-
-                    <div class="command-category">
-                        <div class="category-header">Attacks</div>
-                        <div class="command-list">
-                            <div class="command-item" id='remote-view' data-command="remote_view">Remote View</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        </div>
             
             <!-- Activity Log Panel -->
             <div class="panel activity-log">
