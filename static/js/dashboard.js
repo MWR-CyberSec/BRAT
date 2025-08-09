@@ -12,6 +12,11 @@ function initDashboard(agentId) {
     setTimeout(() => {
         setupAccordionMenu();
         
+        // Set up command library after accordion is ready
+        setTimeout(() => {
+            setupCommandLibrary();
+        }, 100);
+        
         // Add a simple test click handler to verify event handling works
         const testElements = document.querySelectorAll('.accordion-header');
         console.log('Adding test click handlers to', testElements.length, 'elements');
@@ -31,9 +36,6 @@ function initDashboard(agentId) {
     
     // Set up command input
     setupCommandInput();
-    
-    // Set up command library with predefined commands
-    setupCommandLibrary();
     
     // Set up activity log controls
     setupActivityLogControls();
@@ -242,8 +244,12 @@ function setupCommandInput() {
 }
 
 function setupCommandLibrary() {
-    // Clear existing command categories
-    const libraryContent = document.querySelector('.command-library .panel-content');
+    // Clear existing command categories - updated selector for accordion structure
+    const libraryContent = document.getElementById('command-library-content');
+    if (!libraryContent) {
+        console.error('Command library content element not found!');
+        return;
+    }
     libraryContent.innerHTML = '';
     
     // Define command categories with their commands
@@ -328,16 +334,23 @@ function setupCommandLibrary() {
                 const needsPrompt = this.getAttribute('data-prompt') === 'true';
                 const placeholder = this.getAttribute('data-placeholder') || '';
                 
+                let finalCommand = baseCommand;
+                
                 if (needsPrompt) {
                     const userInput = prompt(placeholder);
                     if (userInput !== null) { // Only if user didn't cancel
-                        document.getElementById('command-input').value = baseCommand + userInput;
+                        finalCommand = baseCommand + userInput;
+                    } else {
+                        return; // User cancelled
                     }
-                } else {
-                    document.getElementById('command-input').value = baseCommand;
                 }
                 
-                document.getElementById('command-input').focus();
+                // Execute the command directly instead of just putting it in input
+                console.log('Executing command from library:', finalCommand);
+                queueCommand(finalCommand);
+                
+                // Also show it in the input field for reference
+                document.getElementById('command-input').value = finalCommand;
             });
             
             commandListDiv.appendChild(cmdDiv);
@@ -671,10 +684,11 @@ function initRemoteView() {
     const refreshBtn = document.getElementById('refresh-remote-view');
     const stopBtn = document.getElementById('stop-remote-view');
     
-    // Remote view command button in the command library
-    const remoteViewBtn = document.querySelector('[data-command="attacks.remote_view"]');
-    if (remoteViewBtn) {
-        remoteViewBtn.addEventListener('click', function() {
+    // Use event delegation to handle remote view button clicks (since buttons are created dynamically)
+    document.addEventListener('click', function(event) {
+        if (event.target.matches('[data-command="attacks.remote_view"]')) {
+            console.log('Remote view button clicked via delegation');
+            
             // First make sure the modal exists
             if (!modal) {
                 console.error('Remote view modal not found');
@@ -695,11 +709,9 @@ function initRemoteView() {
             if (remoteViewInterval) {
                 clearInterval(remoteViewInterval);
             }
-            remoteViewInterval = setInterval(fetchRemoteViewData, 5000);
-        });
-    } else {
-        console.warn('Remote view button not found in command library');
-    }
+            remoteViewInterval = setInterval(fetchRemoteViewData, 3000);
+        }
+    });
     
     // Remote view panel button (the small icon that appears after starting remote view)
     const remoteViewPanel = document.getElementById('remote-view-panel');
