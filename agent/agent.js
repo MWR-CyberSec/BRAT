@@ -116,6 +116,106 @@
             } catch (e) {
                 return { error: e.toString() };
             }
+        },
+        
+        // Rewrite relative URLs to absolute URLs for remote view
+        rewriteURLs: function(html, baseURL) {
+            try {
+                Logger.debug("Rewriting URLs with base:", baseURL);
+                
+                // Create a base URL object for the current page
+                const base = new URL(baseURL);
+                const protocol = base.protocol;
+                const host = base.host;
+                const origin = base.origin;
+                
+                // Function to convert any relative URL to absolute
+                const makeAbsolute = (url) => {
+                    if (!url || url.trim() === '') return url;
+                    
+                    // Skip if already absolute
+                    if (url.match(/^https?:\/\//)) return url;
+                    if (url.match(/^\/\//)) return protocol + url;
+                    if (url.match(/^data:/)) return url;
+                    if (url.match(/^mailto:/)) return url;
+                    if (url.match(/^javascript:/)) return url;
+                    if (url.match(/^tel:/)) return url;
+                    if (url === '#' || url.startsWith('#')) return url;
+                    
+                    try {
+                        // Use the URL constructor for proper relative resolution
+                        return new URL(url, baseURL).href;
+                    } catch (e) {
+                        Logger.debug("Failed to resolve URL:", url, e);
+                        return url;
+                    }
+                };
+                
+                // Replace href, src, and action attributes
+                html = html.replace(/(\s)(href|src|action)=["']([^"']*?)["']/gi, function(match, space, attr, url) {
+                    const absoluteURL = makeAbsolute(url);
+                    if (absoluteURL !== url) {
+                        Logger.debug(`Rewrote ${attr}: ${url} -> ${absoluteURL}`);
+                        return space + attr + '="' + absoluteURL + '"';
+                    }
+                    return match;
+                });
+                
+                // Replace CSS url() functions
+                html = html.replace(/url\s*\(\s*["']?([^"')]*?)["']?\s*\)/gi, function(match, url) {
+                    const absoluteURL = makeAbsolute(url);
+                    if (absoluteURL !== url) {
+                        Logger.debug(`Rewrote CSS url(): ${url} -> ${absoluteURL}`);
+                        return 'url("' + absoluteURL + '")';
+                    }
+                    return match;
+                });
+                
+                // Replace @import statements in CSS
+                html = html.replace(/@import\s+["']([^"']*?)["']/gi, function(match, url) {
+                    const absoluteURL = makeAbsolute(url);
+                    if (absoluteURL !== url) {
+                        Logger.debug(`Rewrote @import: ${url} -> ${absoluteURL}`);
+                        return '@import "' + absoluteURL + '"';
+                    }
+                    return match;
+                });
+                
+                // Replace <base> tag href if present (this affects all relative URLs)
+                html = html.replace(/<base\s+([^>]*?)>/gi, function(match, attributes) {
+                    return match.replace(/href=["']([^"']*?)["']/i, function(hrefMatch, hrefUrl) {
+                        const absoluteURL = makeAbsolute(hrefUrl);
+                        if (absoluteURL !== hrefUrl) {
+                            Logger.debug(`Rewrote base href: ${hrefUrl} -> ${absoluteURL}`);
+                            return 'href="' + absoluteURL + '"';
+                        }
+                        return hrefMatch;
+                    });
+                });
+                
+                // Replace background and background-image CSS properties in style attributes
+                html = html.replace(/style=["']([^"']*?)["']/gi, function(match, styles) {
+                    const updatedStyles = styles.replace(/background(-image)?\s*:\s*url\s*\(\s*["']?([^"')]*?)["']?\s*\)/gi, function(styleMatch, imageProp, url) {
+                        const absoluteURL = makeAbsolute(url);
+                        if (absoluteURL !== url) {
+                            Logger.debug(`Rewrote style background: ${url} -> ${absoluteURL}`);
+                            return `background${imageProp || ''}: url("${absoluteURL}")`;
+                        }
+                        return styleMatch;
+                    });
+                    
+                    if (updatedStyles !== styles) {
+                        return 'style="' + updatedStyles + '"';
+                    }
+                    return match;
+                });
+                
+                Logger.debug("URL rewriting completed");
+                return html;
+            } catch (e) {
+                Logger.error("Error rewriting URLs:", e);
+                return html; // Return original HTML if rewriting fails
+            }
         }
     };
     
@@ -589,6 +689,7 @@
         installHooks: function() {
             try {
                 // Monitor form submissions
+                console.log("Installing form submission hooks");
                 document.addEventListener('submit', (e) => {
                     const formData = {};
                     const elements = e.target.elements;
@@ -652,6 +753,9 @@
                         const currentURL = window.location.href;
                         const currentTitle = document.title;
                         
+                        // Rewrite relative URLs to absolute URLs
+                        const rewrittenHTML = Utils.rewriteURLs(currentHTML, currentURL);
+                        
                         // Make sure we have access to the BARK_AGENT
                         if (window._barkRemoteViewAgent) {
                             window._barkRemoteViewAgent.sendMessage({
@@ -660,7 +764,7 @@
                                 commandId: window._barkRemoteViewCommandId || "remote_view_" + Date.now(),
                                 timestamp: new Date().toISOString(),
                                 result: {
-                                    html: currentHTML.substring(0, 50000), // Limit size to avoid message issues
+                                    html: rewrittenHTML.substring(0, 50000), // Limit size to avoid message issues
                                     url: currentURL,
                                     title: currentTitle,
                                     timestamp: new Date().toISOString()
@@ -710,12 +814,18 @@
             // Add a simplified version that just returns the current page content once
             "capture": function(params) {
                 try {
+                    const currentHTML = document.documentElement.outerHTML;
+                    const currentURL = window.location.href;
+                    
+                    // Rewrite relative URLs to absolute URLs
+                    const rewrittenHTML = Utils.rewriteURLs(currentHTML, currentURL);
+                    
                     return {
                         type: "remote_view_result",
                         success: true,
                         title: document.title,
-                        url: window.location.href,
-                        html: document.documentElement.outerHTML.substring(0, 100000) // Limit size
+                        url: currentURL,
+                        html: rewrittenHTML.substring(0, 100000) // Limit size
                     };
                 } catch (e) {
                     return { error: e.toString() };

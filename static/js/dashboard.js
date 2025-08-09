@@ -8,6 +8,20 @@ function initDashboard(agentId) {
     console.log('Initializing dashboard for agent:', agentId);
     currentAgentId = agentId;
     
+    // Initialize accordion menu with a small delay to ensure DOM is ready
+    setTimeout(() => {
+        setupAccordionMenu();
+        
+        // Add a simple test click handler to verify event handling works
+        const testElements = document.querySelectorAll('.accordion-header');
+        console.log('Adding test click handlers to', testElements.length, 'elements');
+        testElements.forEach((el, i) => {
+            el.addEventListener('click', function() {
+                console.log('TEST CLICK HANDLER FIRED for element', i);
+            });
+        });
+    }, 500); // Increased delay
+    
     // Load agent details
     loadAgentDetails(agentId);
     
@@ -27,7 +41,9 @@ function initDashboard(agentId) {
     // Set up navigation controls
     setupNavigationControls();
 
+    // Initialize modals
     initRemoteView();
+    initCommandHistoryModal();
     
     // Set up refresh interval for pending commands and command history
     setInterval(() => {
@@ -37,8 +53,14 @@ function initDashboard(agentId) {
 }
 
 function loadAgentDetails(agentId) {
+
+    // Get the current url
+    const currentUrl = window.location.href;
+    const agentID = currentUrl.split('/').pop();
+
+
     // Fetch agent details from API
-    fetch(`/agents/${agentId}`, {
+    fetch(`/agents/${agentID}`, {
         method: 'GET',
         headers: {
             'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')
@@ -512,6 +534,9 @@ function loadCommandHistory() {
         
         // Process completed commands to show in console
         processCompletedCommands(commands);
+        
+        // Update command history table for modal
+        updateCommandHistoryTable(commands);
     })
     .catch(error => {
         console.error('Error loading command history:', error);
@@ -564,6 +589,7 @@ function processCompletedCommands(commands) {
         const status = cmd.Status || cmd.status;
         const command = cmd.Command || cmd.command;
         const response = cmd.Response || cmd.response;
+        const commandID = cmd.ID || cmd.id;
         
         // Display response in console
         try {
@@ -584,8 +610,47 @@ function processCompletedCommands(commands) {
         
         // Mark command as processed
         cmd.processedByConsole = true;
+        
+        // Remove the command from history after displaying the response
+        if (commandID) {
+            removeCompletedCommandFromHistory(commandID);
+        }
     });
 
+}
+
+// Remove a completed command from history after it's been displayed
+function removeCompletedCommandFromHistory(commandID) {
+    const queueId = window.agentName || currentAgentId;
+    
+    if (!commandID) {
+        console.warn('Cannot remove command: no command ID provided');
+        return;
+    }
+    
+    console.log(`Removing completed command ${commandID} from history`);
+    
+    fetch(`/commands/agent/${queueId}/history/${commandID}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('jwt_token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Failed to remove command: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log(`Command ${commandID} removed from history:`, data.message);
+        // Refresh the command history display
+        updateCommandHistoryTable([]);
+    })
+    .catch(error => {
+        console.error('Error removing command from history:', error);
+        // Don't show user error - this is background cleanup
+    });
 }
 
 let remoteViewActive = true;
@@ -796,4 +861,273 @@ function displayRemoteViewResult(commandResult) {
 function updateRemoteViewStatus(message) {
     const iframe = document.getElementById('remote-view-iframe');
     iframe.srcdoc = `<html><body style="font-family: Arial, sans-serif; color: #00eeff; background-color: #0a0a14; display: flex; justify-content: center; align-items: center; height: 100%; margin: 0;"><p>${message}</p></body></html>`;
+}
+
+// Command History Modal Functions
+function initCommandHistoryModal() {
+    console.log('Initializing command history modal...');
+    const modal = document.getElementById('command-history-modal');
+    const openBtn = document.getElementById('command-history-btn');
+    const closeBtn = document.querySelector('#command-history-modal .modal-close');
+    const refreshBtn = document.getElementById('refresh-command-history');
+    const clearBtn = document.getElementById('clear-command-history');
+    
+    console.log('Modal elements found:', {
+        modal: !!modal,
+        openBtn: !!openBtn,
+        closeBtn: !!closeBtn,
+        refreshBtn: !!refreshBtn,
+        clearBtn: !!clearBtn
+    });
+    
+    // Open modal when clicking the Command History button
+    if (openBtn) {
+        openBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Command history button clicked!');
+            openCommandHistoryModal();
+        });
+    } else {
+        console.error('Command history button not found!');
+    }
+    
+    // Close modal when clicking X
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            console.log('Closing command history modal');
+            modal.style.display = 'none';
+        });
+    }
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        if (modal && event.target === modal) {
+            console.log('Closing modal by clicking outside');
+            modal.style.display = 'none';
+        }
+    });
+    
+    // Refresh command history
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            console.log('Refreshing command history');
+            loadCommandHistory();
+            updateCommandCount();
+        });
+    }
+    
+    // Clear command history
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear the command history? This action cannot be undone.')) {
+                console.log('Clearing command history');
+                clearCommandHistory();
+            }
+        });
+    }
+}
+
+function openCommandHistoryModal() {
+    const modal = document.getElementById('command-history-modal');
+    modal.style.display = 'block';
+    
+    // Refresh the command history when opening
+    loadCommandHistory();
+    updateCommandCount();
+}
+
+function updateCommandCount() {
+    const tableBody = document.getElementById('command-history-table-body');
+    const countElement = document.getElementById('command-count');
+    const lastUpdatedElement = document.getElementById('last-updated');
+    
+    if (tableBody && countElement) {
+        const rowCount = tableBody.children.length;
+        // Don't count the "no commands" row
+        const actualCount = tableBody.innerHTML.includes('No commands in history') ? 0 : rowCount;
+        countElement.textContent = `Total Commands: ${actualCount}`;
+    }
+    
+    if (lastUpdatedElement) {
+        lastUpdatedElement.textContent = `Last Updated: ${new Date().toLocaleTimeString()}`;
+    }
+}
+
+function clearCommandHistory() {
+    fetch('/commands/clear', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('jwt_token'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to clear command history');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Command history cleared:', data);
+        loadCommandHistory(); // Refresh the display
+        addConsoleMessage('Command history cleared', 'system');
+    })
+    .catch(error => {
+        console.error('Error clearing command history:', error);
+        addConsoleMessage('Failed to clear command history: ' + error.message, 'error');
+    });
+}
+
+function updateCommandHistoryTable(commands) {
+    const tableBody = document.getElementById('command-history-table-body');
+    if (!tableBody) return;
+    
+    // Clear existing rows
+    tableBody.innerHTML = '';
+    
+    if (!commands || commands.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" style="text-align: center; color: var(--cyberpunk-accent);">
+                    No commands in history
+                </td>
+            </tr>
+        `;
+        updateCommandCount();
+        return;
+    }
+    
+    // Sort commands by creation time (newest first)
+    const sortedCommands = commands.sort((a, b) => {
+        const timeA = new Date(a.CreatedAt || a.created_at);
+        const timeB = new Date(b.CreatedAt || b.created_at);
+        return timeB - timeA;
+    });
+    
+    sortedCommands.forEach(cmd => {
+        const row = document.createElement('tr');
+        
+        // Format time
+        const createdAt = new Date(cmd.CreatedAt || cmd.created_at);
+        const timeStr = createdAt.toLocaleTimeString();
+        
+        // Get command text
+        const command = cmd.Command || cmd.command || 'Unknown';
+        
+        // Get status
+        const status = cmd.Status || cmd.status || 'unknown';
+        
+        // Get response (truncate if too long for display)
+        let response = cmd.Response || cmd.response || '';
+        if (response.length > 300) {
+            response = response.substring(0, 300) + '...';
+        }
+        
+        row.innerHTML = `
+            <td>${timeStr}</td>
+            <td>${escapeHtml(command)}</td>
+            <td><span class="command-status ${status.toLowerCase()}">${status.toUpperCase()}</span></td>
+            <td>${escapeHtml(response)}</td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+    
+    // Update command count in modal if it's open
+    updateCommandCount();
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Setup accordion menu functionality
+function setupAccordionMenu() {
+    console.log('Setting up accordion menu...');
+    
+    // First, let's check if the basic elements exist
+    const sidebarMenu = document.querySelector('.sidebar-menu');
+    console.log('Sidebar menu found:', sidebarMenu);
+    
+    const accordionSections = document.querySelectorAll('.accordion-section');
+    console.log('Accordion sections found:', accordionSections.length);
+    
+    const accordionHeaders = document.querySelectorAll('.accordion-header');
+    console.log('Found accordion headers:', accordionHeaders.length);
+    
+    if (accordionHeaders.length === 0) {
+        console.error('No accordion headers found! Check HTML structure.');
+        return;
+    }
+    
+    accordionHeaders.forEach((header, index) => {
+        console.log(`Setting up header ${index}:`, header.textContent.trim());
+        
+        // Add a visual indicator that the handler is attached
+        header.style.cursor = 'pointer';
+        
+        header.addEventListener('click', function(event) {
+            console.log('=== ACCORDION CLICK EVENT ===');
+            console.log('Clicked header:', this.textContent.trim());
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const section = this.getAttribute('data-section');
+            console.log('Section attribute:', section);
+            
+            if (!section) {
+                console.error('No data-section attribute found on header');
+                return;
+            }
+            
+            const content = document.getElementById(section + '-content');
+            console.log('Content element found:', content);
+            
+            if (!content) {
+                console.error('Content element not found for section:', section + '-content');
+                return;
+            }
+            
+            // Toggle the expanded state
+            const isCurrentlyExpanded = content.classList.contains('expanded');
+            console.log('Currently expanded:', isCurrentlyExpanded);
+            
+            if (isCurrentlyExpanded) {
+                console.log('Collapsing section:', section);
+                content.classList.remove('expanded');
+                content.classList.add('collapsed');
+                this.classList.remove('expanded');
+            } else {
+                console.log('Expanding section:', section);
+                content.classList.remove('collapsed');
+                content.classList.add('expanded');
+                this.classList.add('expanded');
+            }
+            
+            console.log('New classes on content:', content.className);
+            console.log('=== END ACCORDION CLICK EVENT ===');
+        });
+        
+        console.log('Event listener added to header:', index);
+    });
+    
+    // Initialize with agent details expanded by default
+    console.log('Initializing default expanded state...');
+    const agentDetailsHeader = document.querySelector('[data-section="agent-details"]');
+    const agentDetailsContent = document.getElementById('agent-details-content');
+    console.log('Agent details header found:', agentDetailsHeader);
+    console.log('Agent details content found:', agentDetailsContent);
+    
+    if (agentDetailsHeader && agentDetailsContent) {
+        agentDetailsContent.classList.add('expanded');
+        agentDetailsHeader.classList.add('expanded');
+        console.log('Agent details section initialized as expanded');
+    } else {
+        console.error('Could not initialize agent details as expanded');
+    }
+    
+    console.log('Accordion menu setup complete');
 }
