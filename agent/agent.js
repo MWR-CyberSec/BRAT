@@ -1560,5 +1560,16 @@ PluginSystem.registerPlugin("remoteViewPlugin", {
     };
     
     // Initialize the agent
+    // Example of how to add a plugin at runtime:
+    /*
+    PluginSystem.registerPlugin("screenshotPlugin", {
+        "screenshot": {
+            "capture": function(params) {
+                // Code to capture screenshot
+                return { message: "Screenshot captured" };
+            }
+        }
+    });
+    */
     BARK_AGENT.init();
 })();

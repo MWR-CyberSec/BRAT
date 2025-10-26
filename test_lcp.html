@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LCP Plugin Test</title>
+</head>
+<body>
+    <h1>Testing LCP Plugin Syntax</h1>
+    <div id="output"></div>
+    
+    <script>
+        // Mock PluginSystem for testing
+        const PluginSystem = {
+            registerPlugin: function(name, modules) {
+                console.log('Plugin registered:', name);
+                console.log('Modules:', Object.keys(modules));
+                document.getElementById('output').innerHTML += `<p>✅ Plugin "${name}" loaded successfully</p>`;
+                return true;
+            }
+        };
+        
+        // Mock window variables that the plugin might use
+        window.agentName = 'test-agent';
+        window.serverConfig = {
+            serverIP: 'localhost',
+            serverPort: 8080
+        };
+        
+        console.log('Loading LCP plugin...');
+    </script>
+    
+    <!-- Load the LCP plugin -->
+    <script src="plugins/LCP.js"></script>
+    
+    <script>
+        console.log('LCP plugin loaded, testing cache.get...');
+        // Test if we can access the plugin
+        if (window.PluginSystem && typeof PluginSystem.registerPlugin === 'function') {
+            document.getElementById('output').innerHTML += `<p>✅ PluginSystem is working</p>`;
+        } else {
+            document.getElementById('output').innerHTML += `<p>❌ PluginSystem failed</p>`;
+        }
+    </script>
+</body>
+</html>
