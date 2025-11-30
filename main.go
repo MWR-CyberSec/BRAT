@@ -18,7 +18,7 @@ func main() {
 	is_debug := os.Getenv("DEBUG")
 	host := ""
 	if is_debug == "true" {
-		host = "localhost"
+		host = "0.0.0.0" // temp
 		println("[! BRAT !] Running in debug mode")
 	} else {
 		host = "0.0.0.0"
