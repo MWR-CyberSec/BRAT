@@ -181,9 +181,9 @@
   }
   
   .auth-form {
-    max-width: 450px;
+    max-width: 400px;
     margin: 50px auto;
-    padding: 40px;
+    padding: 30px;
     background-color: var(--cyberpunk-panel);
     border-radius: 5px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
@@ -343,17 +343,13 @@
   
   #auth-panels {
     position: relative;
-    height: 480px;
-    max-width: 450px;
-    margin: 0 auto;
+    height: 480px; /* Increased height to accommodate the cyberpunk styling */
   }
   
   #login-panel, #register-panel {
     position: absolute;
     width: 100%;
     transition: all 0.5s ease;
-    left: 0;
-    right: 0;
   }
   
   #register-panel {
@@ -486,6 +482,7 @@
     99% { top: 40%; }
   }
 
+  /* Additional cyberpunk styles - append to the end of the file */
 
 .title-accent {
     color: var(--cyberpunk-accent);
@@ -593,6 +590,7 @@
     }
   }
 
+  /* Additional cyberpunk styles for the new components - append to end of file */
 
 .btn-icon {
     margin-right: 8px;
@@ -855,17 +853,15 @@
 }
 
 .plugin-editor-header {
-    padding: 20px 25px;
-    border-bottom: 2px solid var(--cyberpunk-accent);
-    background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--cyberpunk-accent);
+    background: var(--card-bg);
 }
 
 .plugin-editor-header h3 {
     margin: 0 0 15px 0;
-    color: var(--cyberpunk-primary);
-    font-size: 1.3rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    color: var(--cyberpunk-accent);
+    font-size: 1.2rem;
 }
 
 .plugin-form {
@@ -880,31 +876,24 @@
 
 .form-group label {
     display: block;
-    margin-bottom: 8px;
-    color: var(--cyberpunk-secondary);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: 0.85rem;
+    margin-bottom: 5px;
+    color: var(--text-light);
+    font-weight: 500;
 }
 
 .form-group input {
     width: 100%;
-    padding: 10px 14px;
-    background: #0a0e14;
-    border: 2px solid var(--cyberpunk-accent);
+    padding: 8px 12px;
+    background: var(--dark-bg);
+    border: 1px solid var(--cyberpunk-accent);
     border-radius: 4px;
     color: var(--text-light);
     font-family: inherit;
-    font-size: 14px;
-    transition: all 0.2s ease;
 }
 
 .form-group input:focus {
     outline: none;
-    border-color: var(--cyberpunk-primary);
-    box-shadow: 0 0 15px rgba(243, 230, 0, 0.3);
-    background: #0d1117;
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
 }
 
 .plugin-editor-body {
@@ -913,48 +902,35 @@
     flex-direction: column;
     padding: 20px;
     min-height: 0;
-    background: #0d1117;
 }
 
 .code-editor-container {
     flex: 1;
-    border: 2px solid var(--cyberpunk-accent);
+    border: 1px solid var(--cyberpunk-accent);
     border-radius: 6px;
-    background: #0a0e14;
+    background: var(--dark-bg);
     position: relative;
-    min-height: 500px;
-    overflow: hidden;
+    min-height: 400px;
 }
 
 .code-editor {
     width: 100%;
     height: 100%;
-    min-height: 500px;
-    background: #0a0e14;
+    min-height: 400px;
+    background: transparent;
     border: none;
-    color: #e6e6e6;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 15px;
-    line-height: 1.6;
-    padding: 20px;
+    color: var(--text-light);
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 15px;
     resize: none;
     outline: none;
     tab-size: 4;
-    box-sizing: border-box;
-    overflow-y: auto;
-    overflow-x: auto;
-    white-space: pre;
-    word-wrap: normal;
-    /* Performance optimizations */
-    will-change: scroll-position;
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    -webkit-font-smoothing: subpixel-antialiased;
 }
 
 .code-editor:focus {
-    box-shadow: inset 0 0 0 2px var(--cyberpunk-accent);
-    background: #0d1117;
+    box-shadow: inset 0 0 20px rgba(0, 255, 65, 0.2);
 }
 
 .no-plugins {
