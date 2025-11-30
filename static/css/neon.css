@@ -343,7 +343,7 @@
   
   #auth-panels {
     position: relative;
-    height: 480px; /* Increased height to accommodate the cyberpunk styling */
+    height: 480px;
   }
   
   #login-panel, #register-panel {
@@ -482,7 +482,6 @@
     99% { top: 40%; }
   }
 
-  /* Additional cyberpunk styles - append to the end of the file */
 
 .title-accent {
     color: var(--cyberpunk-accent);
@@ -590,7 +589,6 @@
     }
   }
 
-  /* Additional cyberpunk styles for the new components - append to end of file */
 
 .btn-icon {
     margin-right: 8px;

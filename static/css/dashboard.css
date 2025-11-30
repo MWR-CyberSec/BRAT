@@ -378,7 +378,6 @@
     color: var(--cyberpunk-secondary);
 }
 
-/* Pending Commands Panel - Now integrated into Command Console */
 .command-queue {
     margin-top: 0;
     margin-bottom: 15px;
@@ -510,7 +509,7 @@
     margin-right: 5px;
 }
 
-/* Responsive adjustments */
+
 @media (max-width: 992px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
