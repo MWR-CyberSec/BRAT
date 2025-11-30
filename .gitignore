@@ -2,8 +2,5 @@
 tmp/
 testdata/
 
-# Ignore all contents in plugins folder (may contain sensitive payloads)
-plugins/
-
 # Ignore generated stager files 
 static/generated/
