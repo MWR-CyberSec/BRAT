@@ -11,6 +11,9 @@ BRAT - Browser Remote Access Tool
 
 ## Usage
 
+
+### Quickstart
+
 You can use the make file to easily get things going.
 
 Run build-docker to perform a clean build:
@@ -18,11 +21,15 @@ Run build-docker to perform a clean build:
 make build-docker
 ```
 
+### Local Development Quickstart
 
-If you are running it locally in a developement environment remember to:
+For local development it is recommended that the following setup is used:
 ```
-wire gen ./config/injector.go
+make build-db # Setup database and REDIS
+go run .
 ```
+
+This removes the need to rebuild BRAT through docker.
 
 ## Command Syntax
 
@@ -33,7 +40,7 @@ When sending commands there is a specific syntax that should be used.
 [MODULE].[COMMAND].(OPTIONAL | [VALUES])
 ```
 
-#### **Available Commands**
+#### **Available Commands** [Not Up To Date]
 |Module| Command | Argument | Response|
 |--|--|--|--|
 | N/A | `ping` |N/A | `pong` |
